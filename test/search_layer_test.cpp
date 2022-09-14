@@ -88,7 +88,7 @@ TEST(searchLayerTest, randTest) {
             auto val = sl->lookup(keys[i] + 1);
             uint64_t* pval = reinterpret_cast<uint64_t*>(val);
             ASSERT_TRUE(&keys[i] == pval); } else
-            ASSERT_EQ(&keys[i], sl->lookup(keys[i]));  
+            ASSERT_EQ(&keys[i], sl->lookup(keys[i]));
     }
     delete sl;
 
@@ -148,10 +148,10 @@ TEST(searchLayerTest, powerOf2Test) {
     for(uint64_t i = 10 ; i < totalInserts; i++) {
         ASSERT_EQ(&keys[i], sl->lookup(keys[i]));
     }
-    
+
     uint64_t k = 512;
     ASSERT_EQ(&keys[99], sl->lookup(k));
-    
+
     delete sl;
 }
 
@@ -214,8 +214,8 @@ TEST(searchLayerTest, logTest1) {
     threads[0]->join();
 
     delete sl;
-    
-    
+
+
 }
 
 TEST(searchLayerTest, randTest2) {
@@ -269,7 +269,7 @@ TEST(searchLayerTest, workloadC) {
     static const int totalInserts = 100000000;
     int count = 0;
     uint64_t keyvec[totalInserts];
-    
+
     while ((count < totalInserts) && infile_load.good()) {
         infile_load >> op >> key;
         ASSERT_TRUE(!op.compare(insert));
@@ -303,7 +303,7 @@ TEST(searchLayerTest, workloadC) {
         uint64_t key = lookupvec[i];
         auto val = sl->lookup(key);
         uint64_t* pval = reinterpret_cast<uint64_t*>(val);
-        if (pval == 0) { 
+        if (pval == 0) {
                 continue;
         }
         //std::cout << &keys[key/100] << " " << pval << std::endl;
@@ -321,4 +321,3 @@ int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-
