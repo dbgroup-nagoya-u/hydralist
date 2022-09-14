@@ -1,27 +1,58 @@
 cmake_minimum_required(VERSION 3.11)
-project(Hydralist)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "-pthread -Wall -Wextra -march=native")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g")
-
-include_directories(${CMAKE_SOURCE_DIR}/include)
-enable_testing()
-
-add_subdirectory(lib/ARTROWEX)
-add_subdirectory(src)
-add_subdirectory(tests)
-
-# GoogleTestをダウンロード
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/tags/release-1.12.0.zip
-)
-# 親プロジェクトのコンパイラ・リンカ設定を上書きするのを防ぐ（Windowsのみ）
-if(WIN32)
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+# decline in-source build
+if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+  message(FATAL_ERROR "In-source builds are not allowed.")
 endif()
-# googletestをターゲットとして使えるようにする
-FetchContent_MakeAvailable(googletest)
+
+# project information
+project(
+  hydralist
+  VERSION "0.1.0"
+  DESCRIPTION "A forked library of cosmoss-jigu/hydralist to use it as a C++ library."
+  LANGUAGES "CXX"
+)
+
+# define source directories
+set(HYDRALIST_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+
+# add_subdirectory(lib/ARTROWEX)
+
+#--------------------------------------------------------------------------------------#
+# Build targets
+#--------------------------------------------------------------------------------------#
+
+if(NOT TARGET hydralist::hydralist)
+  add_library(hydralist STATIC)
+  add_library(hydralist::hydralist ALIAS hydralist)
+  target_compile_features(hydralist PUBLIC
+    "cxx_std_17"
+  )
+  target_compile_options(hydralist PUBLIC
+    -mavx512f
+    -mavx512bw
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2 -march=native">
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"RelWithDebInfo">:"-g3 -Og -pg">
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
+  )
+  target_include_directories(hydralist PUBLIC
+    "${HYDRALIST_SOURCE_DIR}/include"
+  )
+  target_link_libraries(hydralist PUBLIC
+    pthread
+  )
+
+  add_subdirectory(src)
+endif()
+
+#--------------------------------------------------------------------------------------#
+# Build unit tests if required
+#--------------------------------------------------------------------------------------#
+
+option(HYDRALIST_BUILD_TESTS, "Building unit tests for this library if ON." OFF)
+if(${HYDRALIST_BUILD_TESTS})
+  # enable CTest
+  enable_testing()
+  # include unit tests
+  # add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")
+endif()
