@@ -33,3 +33,6 @@
 
 # ignore build directories
 build
+
+# ignore CPU info
+numa-config.h
