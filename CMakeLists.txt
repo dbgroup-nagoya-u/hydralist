@@ -47,8 +47,7 @@ if(NOT TARGET hydralist::hydralist)
   target_compile_options(hydralist PUBLIC
     -mavx512f
     -mavx512bw
-    -march=native
-    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2">
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2 -march=native">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"RelWithDebInfo">:"-g3 -Og -pg">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
