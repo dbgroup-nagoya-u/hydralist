@@ -1,6 +1,6 @@
 #include "common.h"
 #include "numa.h"
-#include "../lib/ARTROWEX/Tree.h"
+#include "Tree.h"
 /*
 class SortedArray {
 private:

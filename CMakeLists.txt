@@ -16,7 +16,11 @@ project(
 # define source directories
 set(HYDRALIST_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
-# add_subdirectory(lib/ARTROWEX)
+#--------------------------------------------------------------------------------------#
+# Configure external libraries
+#--------------------------------------------------------------------------------------#
+
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/external/art")
 
 #--------------------------------------------------------------------------------------#
 # Build targets
@@ -31,7 +35,8 @@ if(NOT TARGET hydralist::hydralist)
   target_compile_options(hydralist PUBLIC
     -mavx512f
     -mavx512bw
-    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2 -march=native">
+    -march=native
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"RelWithDebInfo">:"-g3 -Og -pg">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
@@ -40,6 +45,8 @@ if(NOT TARGET hydralist::hydralist)
   )
   target_link_libraries(hydralist PUBLIC
     pthread
+    numa
+    art
   )
 
   add_subdirectory(src)
@@ -54,5 +61,5 @@ if(${HYDRALIST_BUILD_TESTS})
   # enable CTest
   enable_testing()
   # include unit tests
-  # add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")
 endif()
