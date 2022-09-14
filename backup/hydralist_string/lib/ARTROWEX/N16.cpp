@@ -88,7 +88,7 @@ namespace ART_ROWEX {
         }
         return anyChild;
     }
-    
+
     N *N16::getAnyChildReverse() const {
         N *anyChild = nullptr;
         for (int i = 15; i >= 0; --i) {

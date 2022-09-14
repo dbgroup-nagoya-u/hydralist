@@ -77,7 +77,7 @@ namespace ART_ROWEX {
         assert(false);
         __builtin_unreachable();
     }
-    
+
     N *N::getAnyChildReverse(const N *node) {
         switch (node->getType()) {
             case NTypes::N4: {
@@ -435,7 +435,7 @@ namespace ART_ROWEX {
             }
         }
     }
-    
+
     TID N::getAnyChildTidReverse(const N *n) {
         const N *nextNode = n;
 

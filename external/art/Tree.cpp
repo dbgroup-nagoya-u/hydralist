@@ -644,7 +644,7 @@ namespace ART_ROWEX {
                     uint8_t startLevel = (start.getKeyLen() > level) ? start[level] : 0;
                     N *childNode = N::getChild(startLevel, node);
                     if(childNode != nullptr){
-                        if(start[level] != 0) 
+                        if(start[level] != 0)
                             findStart(childNode, node, level + 1, level);
                         else
                             findStart(childNode, parentNode, level + 1, parentLevel);

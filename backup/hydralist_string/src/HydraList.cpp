@@ -201,7 +201,7 @@ HydraListImpl::~HydraListImpl() {
     for (auto &t : wtArray)
         t->join();
     combinerThead->join();
-    
+
         printf("sl size: %u\n", g_perNumaSlPtr[0]->size());
         //printf("ll size: %u\n", dl.size(dl.getHead()));
     for (int i = 0; i < totalNumaActive; i++)

@@ -317,10 +317,10 @@ int ListNode:: getKeyIndex(Key_t key, uint8_t keyHash) {
 int ListNode:: getFreeIndex(Key_t key, uint8_t keyHash) {
     int freeIndex;
     if (numEntries != 0 && getKeyIndex(key, keyHash) != -1) return -1;
-    
+
     uint64_t bitMapMask = bitMap.to_ulong();
     if (!(~bitMapMask)) return -2;
-    
+
     uint64_t freeIndexMask = ~(bitMapMask);
     if ((uint32_t)freeIndexMask)
         asm("bsf %1, %0" : "=r"(freeIndex) : "r"((uint32_t)freeIndexMask));
@@ -336,12 +336,12 @@ int ListNode:: getFreeIndex(Key_t key, uint8_t keyHash) {
 int ListNode:: getFreeIndex(Key_t key, uint8_t keyHash) {
     int freeIndex;
     if (numEntries != 0 && getKeyIndex(key, keyHash) != -1) return -1;
-    
+
     uint64_t bitMapMask_lower = bitMap.to_ulong(0);
     uint64_t bitMapMask_upper = bitMap.to_ulong(1);
     if ((~(bitMapMask_lower) == 0x0) && (~(bitMapMask_upper) == 0x0)) return -2;
     else if (~(bitMapMask_lower) != 0x0) {
-    
+
         uint64_t freeIndexMask = ~(bitMapMask_lower);
         if ((uint32_t)freeIndexMask)
             asm("bsf %1, %0" : "=r"(freeIndex) : "r"((uint32_t)freeIndexMask));
@@ -363,7 +363,7 @@ int ListNode:: getFreeIndex(Key_t key, uint8_t keyHash) {
             asm("bsf %1, %0" : "=r"(freeIndex) : "r"((uint32_t)freeIndexMask));
             freeIndex += 96;
         }
-        
+
         return freeIndex;
     }
 

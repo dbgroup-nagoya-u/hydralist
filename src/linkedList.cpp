@@ -282,4 +282,3 @@ uint64_t LinkedList::scan(Key_t startKey, int range, std::vector<Val_t> &rangeVe
     }
     return rangeVector.size();
 }
-
