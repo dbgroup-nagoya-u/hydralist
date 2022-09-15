@@ -11,17 +11,20 @@ typedef uint64_t Val_t;
 #define WORKER_THREAD_PER_NUMA 1
 //#define HYDRALIST_ENABLE_STATS
 
-class OpStruct {
-public:
-    enum Operation {insert, remove};
-    Operation op;
-    Key_t key;
-    uint8_t hash;
-    void* listNodePtr;
-    uint64_t ts;
-    bool operator< (const OpStruct& ops) const {
-        return (ts < ops.ts);
-    }
+class OpStruct
+{
+ public:
+  enum Operation { insert, remove };
+  Operation op;
+  Key_t key;
+  uint8_t hash;
+  void *listNodePtr;
+  uint64_t ts;
+  bool
+  operator<(const OpStruct &ops) const
+  {
+    return (ts < ops.ts);
+  }
 };
 
-#endif //HYDRALIST_COMMON_H
+#endif  // HYDRALIST_COMMON_H

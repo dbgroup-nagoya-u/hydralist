@@ -1,6 +1,6 @@
+#include "../lib/ARTROWEX/Tree.h"
 #include "common.h"
 #include "numa.h"
-#include "../lib/ARTROWEX/Tree.h"
 /*
 class SortedArray {
 private:
@@ -37,71 +37,93 @@ public:
     }
 };*/
 
-class ArtRowexIndex {
-private:
-    Key minKey;
-    Key_t curMin;
-    ART_ROWEX::Tree *idx;
-    int numInserts = 0;
-    int numa;
-public:
-    ArtRowexIndex() {
-        if (typeid(Key_t) == typeid(uint64_t)) {
-            idx = new ART_ROWEX::Tree([](TID tid, Key &key) {
-                key.setInt(*reinterpret_cast<uint64_t *>(tid));
-            });
-            minKey.setInt(0);
-            curMin = ULLONG_MAX;
-        } else {
-            idx = new ART_ROWEX::Tree([](TID tid, Key &key) {
-               key.set(reinterpret_cast<char*>(tid), KEYLENGTH);
-            });
-            std::string maxString= "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-            curMin.setFromString(maxString);
-        }
-    }
-    ~ArtRowexIndex() {
-            delete idx;
-    }
-    void setNuma(int numa){this->numa=numa;}
-    void setKey(Key& k, uint64_t key) {k.setInt(key);}
-    void setKey(Key& k, StringKey<KEYLENGTH> key) {k.set(key.getData(), KEYLENGTH);}
-    bool insert(Key_t &key, void* ptr) {
-        auto t = idx->getThreadInfo();
-        Key k;
-        setKey(k, key);
-        idx->insert(k, reinterpret_cast<uint64_t>(ptr), t);
-        if (key < curMin)
-            curMin = key;
-        numInserts++;
-        return true;
-    }
-    bool remove(Key_t &key, void* ptr) {
-        auto t = idx->getThreadInfo();
-        Key k;
-        setKey(k, key);
-        idx->remove(k, reinterpret_cast<uint64_t>(ptr), t);
-        numInserts--;
-        return true;
-    }
-    //Gets the value of the key if present or the value of key just less than/greater than key
-    void* lookup(Key_t &key) {
-        if (key <= curMin)
-            return nullptr;
-        auto t = idx->getThreadInfo();
-        Key endKey;
-        setKey(endKey, key);
+class ArtRowexIndex
+{
+ private:
+  Key minKey;
+  Key_t curMin;
+  ART_ROWEX::Tree *idx;
+  int numInserts = 0;
+  int numa;
 
-        auto result = idx->lookupNext(endKey, t);
-		__builtin_prefetch((const void*) result);
-		__builtin_prefetch((const void*) result + 64);
-        return reinterpret_cast<void*>(result);
+ public:
+  ArtRowexIndex()
+  {
+    if (typeid(Key_t) == typeid(uint64_t)) {
+      idx = new ART_ROWEX::Tree(
+          [](TID tid, Key &key) { key.setInt(*reinterpret_cast<uint64_t *>(tid)); });
+      minKey.setInt(0);
+      curMin = ULLONG_MAX;
+    } else {
+      idx = new ART_ROWEX::Tree(
+          [](TID tid, Key &key) { key.set(reinterpret_cast<char *>(tid), KEYLENGTH); });
+      std::string maxString = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+      curMin.setFromString(maxString);
     }
+  }
+  ~ArtRowexIndex() { delete idx; }
+  void
+  setNuma(int numa)
+  {
+    this->numa = numa;
+  }
+  void
+  setKey(Key &k, uint64_t key)
+  {
+    k.setInt(key);
+  }
+  void
+  setKey(Key &k, StringKey<KEYLENGTH> key)
+  {
+    k.set(key.getData(), KEYLENGTH);
+  }
+  bool
+  insert(Key_t &key, void *ptr)
+  {
+    auto t = idx->getThreadInfo();
+    Key k;
+    setKey(k, key);
+    idx->insert(k, reinterpret_cast<uint64_t>(ptr), t);
+    if (key < curMin) curMin = key;
+    numInserts++;
+    return true;
+  }
+  bool
+  remove(Key_t &key, void *ptr)
+  {
+    auto t = idx->getThreadInfo();
+    Key k;
+    setKey(k, key);
+    idx->remove(k, reinterpret_cast<uint64_t>(ptr), t);
+    numInserts--;
+    return true;
+  }
+  // Gets the value of the key if present or the value of key just less than/greater than key
+  void *
+  lookup(Key_t &key)
+  {
+    if (key <= curMin) return nullptr;
+    auto t = idx->getThreadInfo();
+    Key endKey;
+    setKey(endKey, key);
 
-    // Art segfaults if range operation is done when there are less than 2 keys
-    bool isEmpty() {return (numInserts < 2);}
-    uint32_t size() {return numInserts;}
+    auto result = idx->lookupNext(endKey, t);
+    __builtin_prefetch((const void *)result);
+    __builtin_prefetch((const void *)result + 64);
+    return reinterpret_cast<void *>(result);
+  }
 
+  // Art segfaults if range operation is done when there are less than 2 keys
+  bool
+  isEmpty()
+  {
+    return (numInserts < 2);
+  }
+  uint32_t
+  size()
+  {
+    return numInserts;
+  }
 };
-//typedef SortedArray SearchLayer;
+// typedef SortedArray SearchLayer;
 typedef ArtRowexIndex SearchLayer;
