@@ -25,7 +25,7 @@ class Oplog
   std::vector<OpStruct *> oplog1;
   std::vector<OpStruct *> oplog2;
   std::vector<std::vector<OpStruct *>> op_{oplog1, oplog2};
-  static thread_local Oplog *perThreadLog;
+  static inline thread_local Oplog *perThreadLog = nullptr;
 
  public:
   Oplog(){};

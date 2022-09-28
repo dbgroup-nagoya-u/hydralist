@@ -81,5 +81,4 @@ endfunction()
 
 # add unit tests to build targets
 ADD_HYDRALIST_TEST("linked_list_test")
-ADD_HYDRALIST_TEST("search_layer_test")
 ADD_HYDRALIST_TEST("hydralist_test")

@@ -50,13 +50,10 @@
 #endif
 
 std::vector<WorkerThread *> g_WorkerThreadInst(MAX_NUMA *WORKER_THREAD_PER_NUMA);
-std::vector<SearchLayer *> g_perNumaSlPtr(MAX_NUMA);
 std::set<ThreadData *> g_threadDataSet;
 std::atomic<bool> g_globalStop;
 std::atomic<bool> g_combinerStop;
-thread_local int HydraListImpl::threadNumaNode = -1;
 thread_local ThreadData *curThreadData = NULL;
-int HydraListImpl::totalNumaActive = 0;
 volatile bool threadInitialized[MAX_NUMA];
 volatile bool slReady[MAX_NUMA];
 std::mutex g_threadDataLock;
@@ -67,138 +64,10 @@ volatile std::atomic<bool> g_removeDetected;
 // extern std::set<ThreadData*> g_threadDataSet;
 typedef LinkedList DataLayer;
 
-void
-workerThreadExec(int threadId, int activeNuma)
-{
-  WorkerThread wt(threadId, activeNuma);
-  g_WorkerThreadInst[threadId] = &wt;
-  if (threadId < activeNuma) {
-    while (threadInitialized[threadId] == 0)
-      ;
-    slReady[threadId] = false;
-    assert(numa_node_of_cpu(sched_getcpu()) == threadId);
-    g_perNumaSlPtr[threadId] = HydraListImpl::createSearchLayer();
-    g_perNumaSlPtr[threadId]->setNuma(threadId);
-    slReady[threadId] = true;
-    printf("Search layer %d\n", threadId);
-  }
-  int count = 0;
-  uint64_t lastRemoveCount = 0;
-  while (!g_combinerStop) {
-    usleep(200);
-    while (!wt.isWorkQueueEmpty()) {
-      count++;
-      wt.applyOperation();
-    }
-    if (threadId == 0 && lastRemoveCount != g_removeCount) {
-      wt.freeListNodes(g_removeCount);
-    }
-  }
-  while (!wt.isWorkQueueEmpty()) {
-    count++;
-    if (wt.applyOperation() && !g_removeDetected) {
-      g_removeDetected.store(true);
-    }
-  }
-  // If worker threads are stopping that means there are no more
-  // user threads
-  if (threadId == 0) {
-    wt.freeListNodes(ULLONG_MAX);
-  }
-  g_WorkerThreadInst[threadId] = NULL;
-
-  printf("Worker thread: %d Ops: %d\n", threadId, wt.opcount);
-}
-
-uint64_t
-gracePeriodInit(std::vector<ThreadData *> &threadsToWait)
-{
-  uint64_t curTime = ordo_get_clock();
-  for (auto td : g_threadDataSet) {
-    if (td->getFinish()) {
-      g_threadDataLock.lock();
-      g_threadDataSet.erase(td);
-      g_threadDataLock.unlock();
-      free(td);
-      continue;
-    }
-    if (td->getRunCnt() % 2) {
-      if (ordo_gt_clock(td->getLocalClock(), curTime))
-        continue;
-      else
-        threadsToWait.push_back(td);
-    }
-  }
-  return curTime;
-}
-void
-waitForThreads(std::vector<ThreadData *> &threadsToWait, uint64_t gpStartTime)
-{
-  for (int i = 0; i < threadsToWait.size(); i++) {
-    if (threadsToWait[i] == NULL) continue;
-    ThreadData *td = threadsToWait[i];
-    if (td->getRunCnt() % 2 == 0) continue;
-    if (ordo_gt_clock(td->getLocalClock(), gpStartTime)) continue;
-    while (td->getRunCnt() % 2) {
-      usleep(1);
-      std::atomic_thread_fence(std::memory_order::memory_order_acq_rel);
-    }
-  }
-}
-void
-broadcastDoneCount(uint64_t removeCount)
-{
-  g_removeCount = removeCount;
-}
-void
-combinerThreadExec(int activeNuma)
-{
-  CombinerThread ct;
-  int count = 0;
-  while (!g_globalStop) {
-    std::vector<OpStruct *> *mergedLog = ct.combineLogs();
-    if (mergedLog != nullptr) {
-      count++;
-      ct.broadcastMergedLog(mergedLog, activeNuma);
-    }
-    uint64_t doneCountWt = ct.freeMergedLogs(activeNuma, false);
-    std::vector<ThreadData *> threadsToWait;
-    if (g_removeDetected && doneCountWt != 0) {
-      uint64_t gpStartTime = gracePeriodInit(threadsToWait);
-      waitForThreads(threadsToWait, gpStartTime);
-      broadcastDoneCount(doneCountWt);
-      g_removeDetected.store(false);
-    } else
-      usleep(100);
-  }
-  // TODO fix this
-  int i = 20;
-  while (i--) {
-    usleep(200);
-    std::vector<OpStruct *> *mergedLog = ct.combineLogs();
-    if (mergedLog != nullptr) {
-      count++;
-      ct.broadcastMergedLog(mergedLog, activeNuma);
-    }
-  }
-  while (!ct.mergedLogsToBeFreed()) ct.freeMergedLogs(activeNuma, true);
-  g_combinerStop = true;
-  printf("Combiner thread: Ops: %d\n", count);
-}
-
-void
-pinThread(std::thread *t, int numaId)
-{
-  cpu_set_t cpuSet;
-  CPU_ZERO(&cpuSet);
-  for (int i = 0; i < NUM_SOCKET; i++) {
-    for (int j = 0; j < SMT_LEVEL; j++) {
-      CPU_SET(OS_CPU_ID[numaId][i][j], &cpuSet);
-    }
-  }
-  int rc = pthread_setaffinity_np(t->native_handle(), sizeof(cpu_set_t), &cpuSet);
-  assert(rc == 0);
-}
+unsigned long tacc_rdtscp(int *chip, int *core);
+void workerThreadExec(int threadId, int activeNuma);
+void combinerThreadExec(int activeNuma);
+void pinThread(std::thread *t, int numaId);
 
 class HydraListImpl
 {
@@ -207,7 +76,7 @@ class HydraListImpl
   DataLayer dl;
   std::vector<std::thread *> wtArray;  // CurrentOne but there should be numa number of threads
   std::thread *combinerThead;
-  static thread_local int threadNumaNode;
+  static inline thread_local int threadNumaNode = -1;
 
   void
   createWorkerThread(int numNuma)
@@ -238,7 +107,7 @@ class HydraListImpl
     return jumpNode;
   }
 
-  static int totalNumaActive;
+  static inline int totalNumaActive = 0;
   std::atomic<uint32_t> numThreads;
 
  public:
@@ -407,6 +276,142 @@ class HydraListImpl
   std::atomic<uint64_t> total_dl_time;
 #endif
 };
+
+void
+workerThreadExec(int threadId, int activeNuma)
+{
+  WorkerThread wt(threadId, activeNuma);
+  g_WorkerThreadInst[threadId] = &wt;
+  if (threadId < activeNuma) {
+    while (threadInitialized[threadId] == 0)
+      ;
+    slReady[threadId] = false;
+    assert(numa_node_of_cpu(sched_getcpu()) == threadId);
+    g_perNumaSlPtr[threadId] = HydraListImpl::createSearchLayer();
+    g_perNumaSlPtr[threadId]->setNuma(threadId);
+    slReady[threadId] = true;
+    printf("Search layer %d\n", threadId);
+  }
+  int count = 0;
+  uint64_t lastRemoveCount = 0;
+  while (!g_combinerStop) {
+    usleep(200);
+    while (!wt.isWorkQueueEmpty()) {
+      count++;
+      wt.applyOperation();
+    }
+    if (threadId == 0 && lastRemoveCount != g_removeCount) {
+      wt.freeListNodes(g_removeCount);
+    }
+  }
+  while (!wt.isWorkQueueEmpty()) {
+    count++;
+    if (wt.applyOperation() && !g_removeDetected) {
+      g_removeDetected.store(true);
+    }
+  }
+  // If worker threads are stopping that means there are no more
+  // user threads
+  if (threadId == 0) {
+    wt.freeListNodes(ULLONG_MAX);
+  }
+  g_WorkerThreadInst[threadId] = NULL;
+
+  printf("Worker thread: %d Ops: %d\n", threadId, wt.opcount);
+}
+
+uint64_t
+gracePeriodInit(std::vector<ThreadData *> &threadsToWait)
+{
+  uint64_t curTime = ordo_get_clock();
+  for (auto td : g_threadDataSet) {
+    if (td->getFinish()) {
+      g_threadDataLock.lock();
+      g_threadDataSet.erase(td);
+      g_threadDataLock.unlock();
+      free(td);
+      continue;
+    }
+    if (td->getRunCnt() % 2) {
+      if (ordo_gt_clock(td->getLocalClock(), curTime))
+        continue;
+      else
+        threadsToWait.push_back(td);
+    }
+  }
+  return curTime;
+}
+
+void
+waitForThreads(std::vector<ThreadData *> &threadsToWait, uint64_t gpStartTime)
+{
+  for (int i = 0; i < threadsToWait.size(); i++) {
+    if (threadsToWait[i] == NULL) continue;
+    ThreadData *td = threadsToWait[i];
+    if (td->getRunCnt() % 2 == 0) continue;
+    if (ordo_gt_clock(td->getLocalClock(), gpStartTime)) continue;
+    while (td->getRunCnt() % 2) {
+      usleep(1);
+      std::atomic_thread_fence(std::memory_order::memory_order_acq_rel);
+    }
+  }
+}
+
+void
+broadcastDoneCount(uint64_t removeCount)
+{
+  g_removeCount = removeCount;
+}
+
+void
+combinerThreadExec(int activeNuma)
+{
+  CombinerThread ct;
+  int count = 0;
+  while (!g_globalStop) {
+    std::vector<OpStruct *> *mergedLog = ct.combineLogs();
+    if (mergedLog != nullptr) {
+      count++;
+      ct.broadcastMergedLog(mergedLog, activeNuma);
+    }
+    uint64_t doneCountWt = ct.freeMergedLogs(activeNuma, false);
+    std::vector<ThreadData *> threadsToWait;
+    if (g_removeDetected && doneCountWt != 0) {
+      uint64_t gpStartTime = gracePeriodInit(threadsToWait);
+      waitForThreads(threadsToWait, gpStartTime);
+      broadcastDoneCount(doneCountWt);
+      g_removeDetected.store(false);
+    } else
+      usleep(100);
+  }
+  // TODO fix this
+  int i = 20;
+  while (i--) {
+    usleep(200);
+    std::vector<OpStruct *> *mergedLog = ct.combineLogs();
+    if (mergedLog != nullptr) {
+      count++;
+      ct.broadcastMergedLog(mergedLog, activeNuma);
+    }
+  }
+  while (!ct.mergedLogsToBeFreed()) ct.freeMergedLogs(activeNuma, true);
+  g_combinerStop = true;
+  printf("Combiner thread: Ops: %d\n", count);
+}
+
+void
+pinThread(std::thread *t, int numaId)
+{
+  cpu_set_t cpuSet;
+  CPU_ZERO(&cpuSet);
+  for (int i = 0; i < NUM_SOCKET; i++) {
+    for (int j = 0; j < SMT_LEVEL; j++) {
+      CPU_SET(OS_CPU_ID[numaId][i][j], &cpuSet);
+    }
+  }
+  int rc = pthread_setaffinity_np(t->native_handle(), sizeof(cpu_set_t), &cpuSet);
+  assert(rc == 0);
+}
 
 unsigned long
 tacc_rdtscp(int *chip, int *core)

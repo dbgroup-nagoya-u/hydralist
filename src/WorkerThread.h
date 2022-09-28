@@ -7,7 +7,10 @@
 #include "Combiner.h"
 #include "HydraList.h"
 #include "Oplog.h"
+#include "SearchLayer.h"
 #include "common.h"
+
+std::vector<SearchLayer *> g_perNumaSlPtr(MAX_NUMA);
 
 class WorkerThread
 {
