@@ -5,7 +5,6 @@
 #ifndef HYDRALIST_HYDRALIST_H
 #define HYDRALIST_HYDRALIST_H
 
-#include <ordo_clock.h>
 #include <zconf.h>
 
 #include <algorithm>
@@ -23,6 +22,7 @@
 #include "linkedList.h"
 #include "numa-config.h"
 #include "numa.h"
+#include "ordo_clock.h"
 #include "threadData.h"
 
 // Temp class. Will be replaced by ART
