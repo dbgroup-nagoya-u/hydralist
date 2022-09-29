@@ -69,7 +69,7 @@ function(ADD_HYDRALIST_TEST HYDRALIST_TEST_TARGET)
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
   target_include_directories(${HYDRALIST_TEST_TARGET} PRIVATE
-    "${HYDRALIST_SOURCE_DIR}/src"
+    "${HYDRALIST_SOURCE_DIR}/include"
   )
   target_link_libraries(${HYDRALIST_TEST_TARGET} PRIVATE
     hydralist
