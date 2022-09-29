@@ -47,6 +47,8 @@ def print_cpu_topology_in_c(cpuinfo, topology_map, socket_id_set, physical_cpu_i
     num_physical_cpu_per_socket = int(cpuinfo[0]["cpu cores"])
     smt_level = int(len(cpuinfo) / (num_socket * num_physical_cpu_per_socket))
 
+    print("#ifndef HYDRALIST_COMPONENT_NUMA_CONFIG_H")
+    print("#define HYDRALIST_COMPONENT_NUMA_CONFIG_H")
     print("enum {")
     print("    NUM_SOCKET = %s," % num_socket)
     print("    NUM_PHYSICAL_CPU_PER_SOCKET = %s,"
@@ -68,6 +70,7 @@ def print_cpu_topology_in_c(cpuinfo, topology_map, socket_id_set, physical_cpu_i
             print("    },") # physical cpu id
         print("    },") # socket id
     print("};")
+    print("#endif")
 
 def print_cpu_topology_in_python(cpuinfo, topology_map, socket_id_set, physical_cpu_id_set):
     num_socket = get_num_socket(cpuinfo)
@@ -108,4 +111,3 @@ def parse_option():
 if __name__ == "__main__":
     (cpuinfo, lang) = parse_option()
     build_cpu_topology(cpuinfo, lang)
-
