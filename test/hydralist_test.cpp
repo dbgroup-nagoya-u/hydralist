@@ -1,7 +1,6 @@
 #include "HydraList.h"
 
 #include <gtest/gtest.h>
-#include <numa-config.h>
 
 TEST(hydraListTest, sanityTest)
 {
