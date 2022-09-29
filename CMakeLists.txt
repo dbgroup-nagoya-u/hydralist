@@ -53,6 +53,7 @@ if(NOT TARGET hydralist::hydralist)
   )
   target_include_directories(hydralist PUBLIC
     "${HYDRALIST_SOURCE_DIR}/include"
+    "${HYDRALIST_SOURCE_DIR}/include/hydralist"
   )
   target_link_libraries(hydralist PUBLIC
     pthread
@@ -60,7 +61,7 @@ if(NOT TARGET hydralist::hydralist)
     art
   )
 
-  add_subdirectory(src)
+  add_subdirectory(include/hydralist/component)
 endif()
 
 #--------------------------------------------------------------------------------------#

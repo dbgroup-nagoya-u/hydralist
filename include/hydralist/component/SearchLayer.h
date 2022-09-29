@@ -1,3 +1,6 @@
+#ifndef HYDRALIST_SEARCHLAYER_H
+#define HYDRALIST_SEARCHLAYER_H
+
 #include "Tree.h"
 #include "common.h"
 #include "numa.h"
@@ -113,3 +116,5 @@ class ArtRowexIndex
 };
 // typedef SortedArray SearchLayer;
 typedef ArtRowexIndex SearchLayer;
+
+#endif  // HYDRALIST_SEARCHLAYER_H

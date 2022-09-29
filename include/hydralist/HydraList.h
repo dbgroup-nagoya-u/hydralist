@@ -4,8 +4,8 @@
 
 #ifndef HYDRALIST_HYDRALISTAPI_H
 #define HYDRALIST_HYDRALISTAPI_H
-#include "HydraListImpl.h"
 #include "common.h"
+#include "component/HydraListImpl.h"
 class HydraList
 {
  private:
