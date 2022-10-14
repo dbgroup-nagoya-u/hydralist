@@ -12,6 +12,7 @@
 
 enum Operation { lt, gt };
 
+template <class Key>
 class LinkedList
 {
  private:
@@ -41,7 +42,7 @@ class LinkedList
   }
 
   bool
-  insert(Key_t key, Val_t value, ListNode *head)
+  insert(Key key, Val_t value, ListNode *head)
   {
     int retryCount = 0;
   restart:
@@ -83,7 +84,7 @@ class LinkedList
   }
 
   bool
-  update(Key_t key, Val_t value, ListNode *head)
+  update(Key key, Val_t value, ListNode *head)
   {
     int retryCount = 0;
   restart:
@@ -125,7 +126,7 @@ class LinkedList
   }
 
   bool
-  remove(Key_t key, ListNode *head)
+  remove(Key key, ListNode *head)
   {
   restart:
     ListNode *cur = head;
@@ -162,7 +163,7 @@ class LinkedList
   }
 
   bool
-  probe(Key_t key, ListNode *head)
+  probe(Key key, ListNode *head)
   {
   restart:
     ListNode *cur = head;
@@ -200,7 +201,7 @@ class LinkedList
   }
 
   bool
-  lookup(Key_t key, Val_t &value, ListNode *head)
+  lookup(Key key, Val_t &value, ListNode *head)
   {
     int retryCount = 0;
   restart:
@@ -246,7 +247,7 @@ class LinkedList
   }
 
   uint64_t
-  scan(Key_t startKey, int range, std::vector<Val_t> &rangeVector, ListNode *head)
+  scan(Key startKey, int range, std::vector<Val_t> &rangeVector, ListNode *head)
   {
   restart:
     ListNode *cur = head;

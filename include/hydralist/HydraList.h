@@ -6,6 +6,8 @@
 #define HYDRALIST_HYDRALISTAPI_H
 #include "component/HydraListImpl.h"
 #include "component/common.h"
+
+template <class Key>
 class HydraList
 {
  private:
@@ -15,27 +17,27 @@ class HydraList
   HydraList(int numa) { hl = new HydraListImpl(numa); }
   ~HydraList() { delete hl; }
   bool
-  insert(Key_t key, Val_t val)
+  insert(Key key, Val_t val)
   {
     return hl->insert(key, val);
   }
   bool
-  update(Key_t key, Val_t val)
+  update(Key key, Val_t val)
   {
     return hl->update(key, val);
   }
   Val_t
-  lookup(Key_t key)
+  lookup(Key key)
   {
     return hl->lookup(key);
   }
   Val_t
-  remove(Key_t key)
+  remove(Key key)
   {
     return hl->remove(key);
   }
   uint64_t
-  scan(Key_t startKey, int range, std::vector<Val_t> &result)
+  scan(Key startKey, int range, std::vector<Val_t> &result)
   {
     return hl->scan(startKey, range, result);
   }

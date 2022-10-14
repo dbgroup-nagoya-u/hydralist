@@ -69,6 +69,7 @@ void workerThreadExec(int threadId, int activeNuma);
 void combinerThreadExec(int activeNuma);
 void pinThread(std::thread *t, int numaId);
 
+template <class Key>
 class HydraListImpl
 {
  private:
@@ -97,7 +98,7 @@ class HydraListImpl
   }
 
   ListNode *
-  getJumpNode(Key_t &key)
+  getJumpNode(Key &key)
   {
     int numaNode = getThreadNuma();
     SearchLayer &sl = *g_perNumaSlPtr[numaNode];
@@ -147,7 +148,7 @@ class HydraListImpl
 #endif
   }
   bool
-  insert(Key_t &key, Val_t val)
+  insert(Key &key, Val_t val)
   {
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
@@ -168,7 +169,7 @@ class HydraListImpl
   }
 
   bool
-  update(Key_t &key, Val_t val)
+  update(Key &key, Val_t val)
   {
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
@@ -178,7 +179,7 @@ class HydraListImpl
   }
 
   bool
-  remove(Key_t &key)
+  remove(Key &key)
   {
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
@@ -212,7 +213,7 @@ class HydraListImpl
   }
 
   Val_t
-  lookup(Key_t &key)
+  lookup(Key &key)
   {
     /*
     if (!g_globalStop) {
@@ -244,7 +245,7 @@ class HydraListImpl
   }
 
   uint64_t
-  scan(Key_t &startKey, int range, std::vector<Key_t> &result)
+  scan(Key &startKey, int range, std::vector<Key> &result)
   {
     return dl.scan(startKey, range, result, getJumpNode(startKey));
   }

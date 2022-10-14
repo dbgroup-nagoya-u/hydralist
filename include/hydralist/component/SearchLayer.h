@@ -40,11 +40,12 @@ public:
     }
 };*/
 
+template <class Key>
 class ArtRowexIndex
 {
  private:
   Key minKey;
-  Key_t curMin;
+  Key curMin;
   ART_ROWEX::Tree *idx;
   uint32_t numInserts = 0;
   int numa;
@@ -69,7 +70,7 @@ class ArtRowexIndex
     k.setInt(key);
   }
   bool
-  insert(Key_t key, void *ptr)
+  insert(Key key, void *ptr)
   {
     auto t = idx->getThreadInfo();
     Key k;
@@ -80,7 +81,7 @@ class ArtRowexIndex
     return true;
   }
   bool
-  remove(Key_t key, void *ptr)
+  remove(Key key, void *ptr)
   {
     auto t = idx->getThreadInfo();
     Key k;
@@ -91,7 +92,7 @@ class ArtRowexIndex
   }
   // Gets the value of the key if present or the value of key just less than/greater than key
   void *
-  lookup(Key_t key)
+  lookup(Key key)
   {
     if (key <= curMin) return nullptr;
     auto t = idx->getThreadInfo();
@@ -115,6 +116,6 @@ class ArtRowexIndex
   }
 };
 // typedef SortedArray SearchLayer;
-typedef ArtRowexIndex SearchLayer;
+typedef ArtRowexIndex<uint64_t> SearchLayer;
 
 #endif  // HYDRALIST_SEARCHLAYER_H

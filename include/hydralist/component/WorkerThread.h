@@ -5,10 +5,10 @@
 #include <queue>
 
 #include "Combiner.h"
-#include "HydraList.h"
 #include "Oplog.h"
 #include "SearchLayer.h"
 #include "common.h"
+#include "hydralist/HydraList.h"
 
 std::vector<SearchLayer *> g_perNumaSlPtr(MAX_NUMA);
 
@@ -38,7 +38,7 @@ class WorkerThread
   bool
   applyOperation()
   {
-    std::vector<OpStruct *> *oplog = workQueue->front();
+    std::vector<OpStruct<uint64_t> *> *oplog = workQueue->front();
     int numaNode = workerThreadId % activeNuma;
     SearchLayer *sl = g_perNumaSlPtr[numaNode];
     uint8_t hash = static_cast<uint8_t>(workerThreadId / activeNuma);

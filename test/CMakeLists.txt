@@ -68,9 +68,9 @@ function(ADD_HYDRALIST_TEST HYDRALIST_TEST_TARGET)
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"RelWithDebInfo">:"-g3 -Og -pg">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
-  target_include_directories(${HYDRALIST_TEST_TARGET} PRIVATE
-    "${HYDRALIST_SOURCE_DIR}/src"
-  )
+  # target_include_directories(${HYDRALIST_TEST_TARGET} PRIVATE
+  #   "${HYDRALIST_SOURCE_DIR}/src"
+  # )
   target_link_libraries(${HYDRALIST_TEST_TARGET} PRIVATE
     hydralist
     gtest_main
@@ -81,5 +81,4 @@ endfunction()
 
 # add unit tests to build targets
 ADD_HYDRALIST_TEST("linked_list_test")
-ADD_HYDRALIST_TEST("search_layer_test")
 ADD_HYDRALIST_TEST("hydralist_test")

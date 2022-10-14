@@ -4,9 +4,9 @@
 #include <thread>
 #include <vector>
 
-#include "../include/hydralist/component/Oplog.h"
-#include "../include/hydralist/component/VersionedLock.h"
-#include "../include/hydralist/component/linkedList.h"
+#include "hydralist/component/Oplog.h"
+#include "hydralist/component/VersionedLock.h"
+#include "hydralist/component/linkedList.h"
 
 TEST(LinkedListTest, initializeTest)
 {

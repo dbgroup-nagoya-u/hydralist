@@ -9,6 +9,7 @@
 #include "Oplog.h"
 #include "WorkerThread.h"
 
+template <class Key>
 class CombinerThread
 {
  private:
@@ -17,12 +18,12 @@ class CombinerThread
 
  public:
   CombinerThread() { doneCountCombiner = 0; }
-  std::vector<OpStruct *> *
+  std::vector<OpStruct<uint64_t> *> *
   combineLogs()
   {
     std::atomic_fetch_add(&curQ, 1ul);
     int qnum = static_cast<int>((curQ - 1) % 2);
-    auto mergedLog = new std::vector<OpStruct *>;
+    auto mergedLog = new std::vector<OpStruct<uint64_t> *>;
     for (auto &i : g_perThreadLog) {
       Oplog &log = *i;
       log.lock(qnum);
