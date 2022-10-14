@@ -18,12 +18,12 @@ class CombinerThread
 
  public:
   CombinerThread() { doneCountCombiner = 0; }
-  std::vector<OpStruct<uint64_t> *> *
+  std::vector<OpStruct *> *
   combineLogs()
   {
     std::atomic_fetch_add(&curQ, 1ul);
     int qnum = static_cast<int>((curQ - 1) % 2);
-    auto mergedLog = new std::vector<OpStruct<uint64_t> *>;
+    auto mergedLog = new std::vector<OpStruct *>;
     for (auto &i : g_perThreadLog) {
       Oplog &log = *i;
       log.lock(qnum);
