@@ -20,7 +20,18 @@
 template <class Key>
 class ListNode
 {
+  /*####################################################################################
+   * Type aliases
+   *##################################################################################*/
+
+  using OpStruct_t = OpStruct<Key>;
+  using Oplog_t = Oplog<Key>;
+
  private:
+  /*####################################################################################
+   * Internal member variables
+   *##################################################################################*/
+
   Key min;
   volatile Key max;
   uint8_t numEntries;
@@ -38,6 +49,10 @@ class ListNode
   uint64_t lastScanVersion;
   std::mutex pLock;
   uint8_t permuter[MAX_ENTRIES];
+
+  /*####################################################################################
+   * Internal member functions
+   *##################################################################################*/
 
   ListNode *
   split(Key key, Val_t val, uint8_t keyHash)
@@ -422,8 +437,8 @@ class ListNode
       ListNode *newNode = split(key, value, keyHash);
       ListNode *nextNode = newNode->getNext();
       nextNode->setPrev(newNode);
-      Oplog::enqPerThreadLog(OpStruct::insert, newNode->getMin(), keyHash,
-                             reinterpret_cast<void *>(newNode));
+      Oplog_t::enqPerThreadLog(OpStruct_t::insert, newNode->getMin(), keyHash,
+                               reinterpret_cast<void *>(newNode));
       return true;
     }
     if (!insertAtIndex(std::make_pair(key, value), (uint8_t)index, keyHash)) return false;
@@ -450,15 +465,15 @@ class ListNode
     if (numEntries + next->getNumEntries() < MAX_ENTRIES / 2) {
       ListNode *delNode = mergeWithNext();
       if (delNode != nullptr)
-        Oplog::enqPerThreadLog(OpStruct::remove, delNode->getMin(), keyHash,
-                               reinterpret_cast<void *>(delNode));
+        Oplog_t::enqPerThreadLog(OpStruct_t::remove, delNode->getMin(), keyHash,
+                                 reinterpret_cast<void *>(delNode));
       return true;
     }
     if (prev != NULL && numEntries + prev->getNumEntries() < MAX_ENTRIES / 2) {
       ListNode *delNode = mergeWithPrev();
       if (delNode != nullptr)
-        Oplog::enqPerThreadLog(OpStruct::remove, delNode->getMin(), keyHash,
-                               reinterpret_cast<void *>(delNode));
+        Oplog_t::enqPerThreadLog(OpStruct_t::remove, delNode->getMin(), keyHash,
+                                 reinterpret_cast<void *>(delNode));
     }
     return true;
   }
