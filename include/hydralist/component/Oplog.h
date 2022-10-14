@@ -12,7 +12,7 @@
 #include "common.h"
 #include "ordo_clock.h"
 
-boost::lockfree::spsc_queue<std::vector<OpStruct<uint64_t> *> *, boost::lockfree::capacity<10000>>
+boost::lockfree::spsc_queue<std::vector<OpStruct *> *, boost::lockfree::capacity<10000>>
     g_workQueue[MAX_NUMA * WORKER_THREAD_PER_NUMA];
 std::atomic<int> numSplits;
 int combinerSplits = 0;
@@ -23,9 +23,9 @@ class Oplog
 {
  private:
   std::mutex qLock[2];
-  std::vector<OpStruct<Key> *> oplog1;
-  std::vector<OpStruct<Key> *> oplog2;
-  std::vector<std::vector<OpStruct<Key> *>> op_{oplog1, oplog2};
+  std::vector<OpStruct *> oplog1;
+  std::vector<OpStruct *> oplog2;
+  std::vector<std::vector<OpStruct *>> op_{oplog1, oplog2};
   static inline thread_local Oplog *perThreadLog = nullptr;
 
  public:
@@ -37,7 +37,7 @@ class Oplog
     op_[qnum].clear();
   }
 
-  std::vector<OpStruct<Key> *> *
+  std::vector<OpStruct *> *
   getQ(int qnum)
   {
     return &op_[qnum];
@@ -66,7 +66,7 @@ class Oplog
   void
   enq(OpStruct::Operation op, Key key, uint8_t hash, void *listNodePtr)
   {
-    OpStruct<Key> *ops = new OpStruct<Key>;
+    OpStruct *ops = new OpStruct;
     ops->op = op;
     ops->key = key;
     ops->hash = static_cast<uint8_t>(hash % WORKER_THREAD_PER_NUMA);

@@ -116,6 +116,6 @@ class ArtRowexIndex
   }
 };
 // typedef SortedArray SearchLayer;
-typedef ArtRowexIndex<uint64_t> SearchLayer;
+typedef ArtRowexIndex SearchLayer;
 
 #endif  // HYDRALIST_SEARCHLAYER_H
