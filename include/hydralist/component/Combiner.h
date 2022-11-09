@@ -9,23 +9,30 @@
 #include "Oplog.h"
 #include "WorkerThread.h"
 
-template <class Key>
+template <class K>
 class CombinerThread
 {
+  /*####################################################################################
+   * Type aliases
+   *##################################################################################*/
+
+  using OpStruct_t = OpStruct<K>;
+  using Oplog_t = Oplog<K>;
+
  private:
-  std::queue<std::pair<unsigned long, std::vector<OpStruct *> *>> logQueue;
+  std::queue<std::pair<unsigned long, std::vector<OpStruct_t *> *>> logQueue;
   unsigned long doneCountCombiner;
 
  public:
   CombinerThread() { doneCountCombiner = 0; }
-  std::vector<OpStruct *> *
+  std::vector<OpStruct_t *> *
   combineLogs()
   {
     std::atomic_fetch_add(&curQ, 1ul);
     int qnum = static_cast<int>((curQ - 1) % 2);
-    auto mergedLog = new std::vector<OpStruct *>;
+    auto mergedLog = new std::vector<OpStruct_t *>;
     for (auto &i : g_perThreadLog) {
-      Oplog &log = *i;
+      Oplog_t &log = *i;
       log.lock(qnum);
       auto op_ = log.getQ(qnum);
       if (!op_->empty()) mergedLog->insert(std::end(*mergedLog), std::begin(*op_), std::end(*op_));
@@ -45,7 +52,7 @@ class CombinerThread
   }
 
   void
-  broadcastMergedLog(std::vector<OpStruct *> *mergedLog, int activeNuma)
+  broadcastMergedLog(std::vector<OpStruct_t *> *mergedLog, int activeNuma)
   {
     for (auto i = 0; i < activeNuma * WORKER_THREAD_PER_NUMA; i++) g_workQueue[i].push(mergedLog);
   }
@@ -57,7 +64,7 @@ class CombinerThread
 
     unsigned long minDoneCountWt = ULONG_MAX;
     for (auto i = 0; i < activeNuma * WORKER_THREAD_PER_NUMA; i++) {
-      unsigned long logDoneCount = g_WorkerThreadInst[i]->getLogDoneCount();
+      unsigned long logDoneCount = g_WorkerThreadInst<K>[i] -> getLogDoneCount();
       if (logDoneCount < minDoneCountWt) minDoneCountWt = logDoneCount;
     }
 

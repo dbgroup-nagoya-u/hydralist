@@ -11,13 +11,13 @@ typedef uint64_t Val_t;
 #define WORKER_THREAD_PER_NUMA 1
 //#define HYDRALIST_ENABLE_STATS
 
-template <class Key>
+template <class K>
 class OpStruct
 {
  public:
   enum Operation { insert, remove };
   Operation op;
-  Key key;
+  K key;
   uint8_t hash;
   void *listNodePtr;
   uint64_t ts;

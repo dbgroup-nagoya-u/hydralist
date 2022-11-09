@@ -8,18 +8,77 @@
 #include "hydralist/component/VersionedLock.h"
 #include "hydralist/component/linkedList.h"
 
-TEST(LinkedListTest, initializeTest)
+/*######################################################################################
+ * Global constants
+ *####################################################################################*/
+
+/*######################################################################################
+ * Fixture definition
+ *####################################################################################*/
+template <class K>
+class linkedListTest : public ::testing::Test
 {
-  LinkedList testList;
+ protected:
+  /*####################################################################################
+   * Setup/Teardown
+   *##################################################################################*/
+
+  void
+  SetUp() override
+  {
+  }
+
+  void
+  TearDown() override
+  {
+  }
+
+  /*####################################################################################
+   * Internal member variables
+   *##################################################################################*/
+
+  using LinkedList_t = LinkedList<K>;
+  using ListNode_t = ListNode<K>;
+
+  static void
+  multithreadInsert(
+      LinkedList_t *ll, int threadId, int numInserts, int MAX_THREADS, std::vector<int> &nums)
+  {
+    int range = numInserts / MAX_THREADS;
+    for (volatile int i = range * threadId; i < (range * (threadId + 1)); i++) {
+      ll->insert(nums[i], nums[i], ll->getHead());
+    }
+  }
+
+  static void
+  multithreadRemove(
+      LinkedList_t *ll, int threadId, int numInserts, int MAX_THREADS, std::vector<int> *numsPtr)
+  {
+    std::vector<int> &nums = *numsPtr;
+    int range = numInserts / MAX_THREADS;
+    for (volatile int i = range * threadId; i < range * (threadId + 1); i++) {
+      uint64_t x = nums[i];
+      ll->remove(x, ll->getHead());
+    }
+  }
+};
+
+using TestTargets = ::testing::Types<uint64_t>;
+
+TYPED_TEST_SUITE(linkedListTest, TestTargets);
+
+TYPED_TEST(linkedListTest, initializeTest)
+{
+  typename TestFixture::LinkedList_t testList;
   ASSERT_NE(nullptr, testList.initialize());
   ASSERT_EQ(1, testList.getHead()->getNumEntries());
   ASSERT_NE(nullptr, testList.getHead()->getNext());
 }
 
-TEST(LinkedListTest, insertRemoveTest)
+TYPED_TEST(linkedListTest, insertRemoveTest)
 {
-  LinkedList testList;
-  ListNode *head = testList.initialize();
+  typename TestFixture::LinkedList_t testList;
+  typename TestFixture::ListNode_t *head = testList.initialize();
 
   Val_t value = 100;
   testList.insert(100, value, testList.getHead());
@@ -42,10 +101,10 @@ TEST(LinkedListTest, insertRemoveTest)
   ASSERT_EQ(3, head->getNumEntries());
 }
 
-TEST(LinkedListTest, splitTest)
+TYPED_TEST(linkedListTest, splitTest)
 {
-  LinkedList testList;
-  ListNode *head = testList.initialize();
+  typename TestFixture::LinkedList_t testList;
+  typename TestFixture::ListNode_t *head = testList.initialize();
 
   int testsize = 200;
   std::set<int> randset;
@@ -72,32 +131,13 @@ TEST(LinkedListTest, splitTest)
   }
   // testList.print(head);
 }
-void
-multithreadInsert(
-    LinkedList *ll, int threadId, int numInserts, int MAX_THREADS, std::vector<int> &nums)
-{
-  int range = numInserts / MAX_THREADS;
-  for (volatile int i = range * threadId; i < (range * (threadId + 1)); i++) {
-    ll->insert(nums[i], nums[i], ll->getHead());
-  }
-}
-void
-multithreadRemove(
-    LinkedList *ll, int threadId, int numInserts, int MAX_THREADS, std::vector<int> *numsPtr)
-{
-  std::vector<int> &nums = *numsPtr;
-  int range = numInserts / MAX_THREADS;
-  for (volatile int i = range * threadId; i < range * (threadId + 1); i++) {
-    uint64_t x = nums[i];
-    ll->remove(x, ll->getHead());
-  }
-}
-TEST(LinkedListTest, multithread1)
+
+TYPED_TEST(linkedListTest, multithread1)
 {
   int MAX_THREADS = 8;
   int numInserts = 10000;
   std::vector<int> nums(numInserts);
-  LinkedList ll;
+  typename TestFixture::LinkedList_t ll;
   ll.initialize();
   for (int i = 0; i < numInserts; i++) {
     nums[i] = rand();
@@ -105,8 +145,8 @@ TEST(LinkedListTest, multithread1)
   }
   std::thread *threads[MAX_THREADS];
   for (int i = 0; i < MAX_THREADS; i++) {
-    threads[i] =
-        new std::thread(multithreadInsert, &ll, i, numInserts, MAX_THREADS, std::ref(nums));
+    threads[i] = new std::thread(TestFixture::multithreadInsert, &ll, i, numInserts, MAX_THREADS,
+                                 std::ref(nums));
   }
   for (int i = 0; i < MAX_THREADS; i++) threads[i]->join();
 
@@ -115,26 +155,27 @@ TEST(LinkedListTest, multithread1)
     ASSERT_EQ(true, ll.lookup(nums[i], val, ll.getHead()));
   }
   for (int i = 0; i < MAX_THREADS; i++) {
-    threads[i] = new std::thread(multithreadRemove, &ll, i, numInserts, MAX_THREADS, &nums);
+    threads[i] =
+        new std::thread(TestFixture::multithreadRemove, &ll, i, numInserts, MAX_THREADS, &nums);
   }
   for (int i = 0; i < MAX_THREADS; i++) threads[i]->join();
   // ll.print(ll.getHead());
 }
 
-TEST(LinkedListTest, scanTest)
+TYPED_TEST(linkedListTest, scanTest)
 {
   int MAX_THREADS = 1;
   int numInserts = 10000;
   std::vector<int> nums(numInserts);
-  LinkedList ll;
+  typename TestFixture::LinkedList_t ll;
   ll.initialize();
   for (int i = 1; i < numInserts + 1; i++) {
     nums[i] = i;
   }
   std::thread *threads[MAX_THREADS];
   for (int i = 0; i < MAX_THREADS; i++) {
-    threads[i] =
-        new std::thread(multithreadInsert, &ll, i, numInserts, MAX_THREADS, std::ref(nums));
+    threads[i] = new std::thread(TestFixture::multithreadInsert, &ll, i, numInserts, MAX_THREADS,
+                                 std::ref(nums));
   }
   for (int i = 0; i < MAX_THREADS; i++) threads[i]->join();
 
@@ -146,7 +187,8 @@ TEST(LinkedListTest, scanTest)
   }
 }
 
-TEST(lockTest, sanitytest)
+TYPED_TEST(linkedListTest, sanitytest)
+// TYPED_TEST(lockTest, sanitytest)
 {
   VersionedLock lock;
   std::vector<int> tvector;
@@ -161,7 +203,8 @@ TEST(lockTest, sanitytest)
   ASSERT_EQ(true, success);
 }
 
-TEST(lockTest, InterleaveRW)
+TYPED_TEST(linkedListTest, InterleaveRW)
+// TYPED_TEST(lockTest, InterleaveRW)
 {
   VersionedLock lock;
   std::vector<int> tvector;

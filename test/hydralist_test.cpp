@@ -9,7 +9,7 @@
 /*######################################################################################
  * Fixture definition
  *####################################################################################*/
-template <class T>
+template <class K>
 class hydraListTest : public ::testing::Test
 {
  protected:
@@ -30,18 +30,33 @@ class hydraListTest : public ::testing::Test
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
+
+  using HydraList_t = HydraList<K>;
+
+  void
+  insert(int threadId, int n, int MAX_THREAD, HydraList_t *hl)
+  {
+    int range = n / MAX_THREAD;
+    hl->registerThread();
+    for (int i = range * threadId; i < range * (threadId + 1); i++) {
+      if (i == 0) continue;
+      ASSERT_EQ(true, hl->insert(i, i));
+    }
+    hl->unregisterThread();
+  }
+
+  void
+  concRemove(int threadId, int n, int MAX_THREAD, HydraList_t *hl)
+  {
+    int range = n / MAX_THREAD;
+    hl->registerThread();
+    for (int i = range * threadId; i < range * (threadId + 1); i++) {
+      if (i == 0) continue;
+      ASSERT_EQ(true, hl->remove(i));
+    }
+    hl->unregisterThread();
+  }
 };
-
-// template <class K, class V, class C>
-// using BTreeOMLFixLen = ::dbgroup::index::b_tree::BTreeOMLFixLen<K, V, C>;
-
-// using TestTargets = ::testing::Types<              //
-//     IndexInfo<BTreeOMLFixLen, UInt8, UInt8>,       // fixed-length keys
-//     IndexInfo<BTreeOMLFixLen, UInt4, UInt8>,       // small keys
-//     IndexInfo<BTreeOMLFixLen, UInt8, UInt4>,       // small payloads
-//     IndexInfo<BTreeOMLFixLen, UInt4, UInt4>,       // small keys/payloads
-//     IndexInfo<BTreeOMLFixLen, Original, Original>  // original class keys/payloads
-//     >;
 
 using TestTargets = ::testing::Types<uint64_t>;
 
@@ -49,16 +64,17 @@ TYPED_TEST_SUITE(hydraListTest, TestTargets);
 
 TYPED_TEST(hydraListTest, sanityTest)
 {
-  HydraList<uint64_t> hl(1);
+  typename TestFixture::HydraList_t hl(1);
   hl.registerThread();
   ASSERT_EQ(true, hl.insert(10, 10));
   ASSERT_EQ(10, hl.lookup(10));
   hl.unregisterThread();
 }
+
 // TYPED_TEST(hydraListTest, splitTest)
 // {
 //   int n = 10000;
-//   HydraList *hl = new HydraList(1);
+//   HydraList<uint64_t> *hl = new HydraList<uint64_t>(1);
 //   hl->registerThread();
 
 //   for (int i = 1; i < n; i++) {
@@ -74,7 +90,7 @@ TYPED_TEST(hydraListTest, sanityTest)
 // }
 
 // void
-// insert(int threadId, int n, int MAX_THREAD, HydraList *hl)
+// insert(int threadId, int n, int MAX_THREAD, HydraList<uint64_t> *hl)
 // {
 //   int range = n / MAX_THREAD;
 //   hl->registerThread();
@@ -84,8 +100,9 @@ TYPED_TEST(hydraListTest, sanityTest)
 //   }
 //   hl->unregisterThread();
 // }
+
 // void
-// concRemove(int threadId, int n, int MAX_THREAD, HydraList *hl)
+// concRemove(int threadId, int n, int MAX_THREAD, HydraList<uint64_t> *hl)
 // {
 //   int range = n / MAX_THREAD;
 //   hl->registerThread();
@@ -99,7 +116,7 @@ TYPED_TEST(hydraListTest, sanityTest)
 // TYPED_TEST(hydraListTest, concurrentInsert)
 // {
 //   int n = 100000;
-//   HydraList *hl = new HydraList(1);
+//   HydraList<uint64_t> *hl = new HydraList<uint64_t>(1);
 //   int MAX_THREAD = 200;
 //   std::thread *threads[MAX_THREAD];
 //   for (int i = 0; i < MAX_THREAD; i++) {
@@ -121,7 +138,7 @@ TYPED_TEST(hydraListTest, sanityTest)
 // TYPED_TEST(hydraListTest, remove)
 // {
 //   int n = 100000;
-//   HydraList *hl = new HydraList(1);
+//   HydraList<uint64_t> *hl = new HydraList<uint64_t>(1);
 //   int MAX_THREAD = 8;
 //   std::thread *threads[MAX_THREAD];
 //   for (int i = 0; i < MAX_THREAD; i++) {
@@ -146,7 +163,7 @@ TYPED_TEST(hydraListTest, sanityTest)
 // TYPED_TEST(hydraListTest, concurrentRemove)
 // {
 //   int n = 100000;
-//   HydraList *hl = new HydraList(1);
+//   HydraList<uint64_t> *hl = new HydraList<uint64_t>(1);
 //   int MAX_THREAD = 8;
 //   std::thread *threads[MAX_THREAD];
 //   for (int i = 0; i < MAX_THREAD; i++) {
@@ -180,7 +197,7 @@ TYPED_TEST(hydraListTest, sanityTest)
 // TYPED_TEST(hydraListTest, scan)
 // {
 //   int n = 100000;
-//   HydraList *hl = new HydraList(1);
+//   HydraList<uint64_t> *hl = new HydraList<uint64_t>(1);
 //   int MAX_THREAD = 4;
 //   std::thread *threads[MAX_THREAD];
 //   for (int i = 0; i < MAX_THREAD; i++) {
@@ -193,7 +210,9 @@ TYPED_TEST(hydraListTest, sanityTest)
 //   hl->registerThread();
 //   int range = 100;
 //   std::vector<Val_t> result(range);
-//   Key_t startKey = 100;
+//   // Key_t startKey = 100;
+//   uint64_t startKey = 100;
+
 //   uint64_t resultSize = hl->scan(startKey, range, result);
 //   ASSERT_EQ(resultSize, range);
 //   for (uint64_t i = 0; i < resultSize; i++) {
@@ -218,7 +237,7 @@ TYPED_TEST(hydraListTest, sanityTest)
 //   }
 // }
 // void
-// insert1(int threadId, int n, int MAX_THREAD, HydraList *hl)
+// insert1(int threadId, int n, int MAX_THREAD, HydraList<uint64_t> *hl)
 // {
 //   int range = n / MAX_THREAD;
 //   hl->registerThread();
@@ -228,7 +247,7 @@ TYPED_TEST(hydraListTest, sanityTest)
 //   hl->unregisterThread();
 // }
 // void
-// concLookup(int threadId, int n, int MAX_THREAD, HydraList *hl)
+// concLookup(int threadId, int n, int MAX_THREAD, HydraList<uint64_t> *hl)
 // {
 //   int range = n / MAX_THREAD;
 //   hl->registerThread();
@@ -237,10 +256,10 @@ TYPED_TEST(hydraListTest, sanityTest)
 //   }
 //   hl->unregisterThread();
 // }
-// TYPED_TEST(hydralistTest, concLookup)
+// TYPED_TEST(hydraListTest, concLookup)
 // {
 //   int n = 100000;
-//   HydraList *hl = new HydraList(1);
+//   HydraList<uint64_t> *hl = new HydraList<uint64_t>(1);
 //   int MAX_THREAD = 8;
 //   std::thread *threads[MAX_THREAD];
 //   generateRandomNums(n * 2);

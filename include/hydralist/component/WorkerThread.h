@@ -10,12 +10,20 @@
 #include "common.h"
 #include "hydralist/HydraList.h"
 
-std::vector<SearchLayer *> g_perNumaSlPtr(MAX_NUMA);
+template <class K>
+std::vector<SearchLayer<K> *> g_perNumaSlPtr(MAX_NUMA);
 
+template <class K>
 class WorkerThread
 {
+  /*####################################################################################
+   * Type aliases
+   *##################################################################################*/
+
+  using OpStruct_t = OpStruct<K>;
+
  private:
-  boost::lockfree::spsc_queue<std::vector<OpStruct *> *, boost::lockfree::capacity<10000>>
+  boost::lockfree::spsc_queue<std::vector<OpStruct_t *> *, boost::lockfree::capacity<10000>>
       *workQueue;
   int workerThreadId;
   int activeNuma;
@@ -38,18 +46,18 @@ class WorkerThread
   bool
   applyOperation()
   {
-    std::vector<OpStruct *> *oplog = workQueue->front();
+    std::vector<OpStruct_t *> *oplog = workQueue->front();
     int numaNode = workerThreadId % activeNuma;
-    SearchLayer *sl = g_perNumaSlPtr[numaNode];
+    SearchLayer<K> *sl = g_perNumaSlPtr<K>[numaNode];
     uint8_t hash = static_cast<uint8_t>(workerThreadId / activeNuma);
     bool ret = false;
     for (auto opsPtr : *oplog) {
-      OpStruct &ops = *opsPtr;
+      OpStruct_t &ops = *opsPtr;
       if (ops.hash != hash) continue;
       opcount++;
-      if (ops.op == OpStruct::insert)
+      if (ops.op == OpStruct_t::insert)
         sl->insert(ops.key, ops.listNodePtr);
-      else if (ops.op == OpStruct::remove) {
+      else if (ops.op == OpStruct_t::remove) {
         sl->remove(ops.key, ops.listNodePtr);
         if (workerThreadId == 0) {
           std::pair<uint64_t, void *> removePair;
@@ -94,6 +102,7 @@ class WorkerThread
   }
 };
 
-extern std::vector<WorkerThread *> g_WorkerThreadInst;
+template <class K>
+extern std::vector<WorkerThread<K> *> g_WorkerThreadInst;
 
 #endif  // HYDRALIST_WORKERTHREAD_H

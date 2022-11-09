@@ -7,37 +7,43 @@
 #include "component/HydraListImpl.h"
 #include "component/common.h"
 
-template <class Key>
+template <class K>
 class HydraList
 {
+  /*####################################################################################
+   * Type aliases
+   *##################################################################################*/
+
+  using HydraListImpl_t = HydraListImpl<K>;
+
  private:
-  HydraListImpl *hl;
+  HydraListImpl_t *hl;
 
  public:
-  HydraList(int numa) { hl = new HydraListImpl(numa); }
+  HydraList(int numa) { hl = new HydraListImpl_t(numa); }
   ~HydraList() { delete hl; }
   bool
-  insert(Key key, Val_t val)
+  insert(K key, Val_t val)
   {
     return hl->insert(key, val);
   }
   bool
-  update(Key key, Val_t val)
+  update(K key, Val_t val)
   {
     return hl->update(key, val);
   }
   Val_t
-  lookup(Key key)
+  lookup(K key)
   {
     return hl->lookup(key);
   }
   Val_t
-  remove(Key key)
+  remove(K key)
   {
     return hl->remove(key);
   }
   uint64_t
-  scan(Key startKey, int range, std::vector<Val_t> &result)
+  scan(K startKey, int range, std::vector<Val_t> &result)
   {
     return hl->scan(startKey, range, result);
   }
