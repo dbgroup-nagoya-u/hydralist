@@ -103,6 +103,6 @@ class WorkerThread
 };
 
 template <class K>
-extern std::vector<WorkerThread<K> *> g_WorkerThreadInst;
+std::vector<WorkerThread<K> *> g_WorkerThreadInst(MAX_NUMA *WORKER_THREAD_PER_NUMA);
 
 #endif  // HYDRALIST_WORKERTHREAD_H

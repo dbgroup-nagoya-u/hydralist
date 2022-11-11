@@ -49,8 +49,6 @@
 #define hydralist_reset_timers()
 #endif
 
-template <class K>
-std::vector<WorkerThread<K> *> g_WorkerThreadInst(MAX_NUMA *WORKER_THREAD_PER_NUMA);
 std::set<ThreadData *> g_threadDataSet;
 std::atomic<bool> g_globalStop;
 std::atomic<bool> g_combinerStop;
