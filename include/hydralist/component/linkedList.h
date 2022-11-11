@@ -212,7 +212,7 @@ class LinkedList
     int retryCount = 0;
   restart:
     ListNode_t *cur = head;
-    int count = 0;
+    [[maybe_unused]] int count = 0;
     // if(cur->getMin() > key)
     //    std::atomic_fetch_add(&numSplits, 1);
 
@@ -253,7 +253,7 @@ class LinkedList
   }
 
   uint64_t
-  scan(K startKey, int range, std::vector<Val_t> &rangeVector, ListNode_t *head)
+  scan(K startKey, size_t range, std::vector<Val_t> &rangeVector, ListNode_t *head)
   {
   restart:
     ListNode_t *cur = head;

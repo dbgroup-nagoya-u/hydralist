@@ -432,7 +432,7 @@ class ListNode
   {
     uint8_t keyHash = getKeyFingerPrint(key);
     int index = getFreeIndex(key, keyHash);
-    if (index == -1) return false;  // Key exitst
+    if (index == -1) return false;  // Key exist
     if (index == -2) {              // No free index
       ListNode *newNode = split(key, value, keyHash);
       ListNode *nextNode = newNode->getNext();
@@ -503,7 +503,7 @@ class ListNode
   }
 
   bool
-  scan(K startKey, int range, std::vector<Val_t> &rangeVector, uint64_t writeVersion)
+  scan(K startKey, size_t range, std::vector<Val_t> &rangeVector, uint64_t writeVersion)
   {
     if (next == nullptr) return true;
 

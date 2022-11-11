@@ -70,7 +70,7 @@ TYPED_TEST_SUITE(linkedListTest, TestTargets);
 TYPED_TEST(linkedListTest, initializeTest)
 {
   typename TestFixture::LinkedList_t testList;
-  ASSERT_NE(nullptr, testList.initialize());
+  ASSERT_NE(nullptr, testList.initialize());  // NOLINT
   ASSERT_EQ(1, testList.getHead()->getNumEntries());
   ASSERT_NE(nullptr, testList.getHead()->getNext());
 }
@@ -141,7 +141,7 @@ TYPED_TEST(linkedListTest, multithread1)
   ll.initialize();
   for (int i = 0; i < numInserts; i++) {
     nums[i] = rand();
-    if (nums[i] == 0 || nums[i] == ULLONG_MAX) i--;
+    if (nums[i] == 0 || static_cast<size_t>(nums[i]) == ULLONG_MAX) i--;
   }
   std::thread *threads[MAX_THREADS];
   for (int i = 0; i < MAX_THREADS; i++) {

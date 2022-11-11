@@ -163,7 +163,7 @@ class HydraListImpl
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
     ListNode_t *jumpNode;
-    uint64_t ticks = 0;
+    [[maybe_unused]] uint64_t ticks = 0;
     bool ret;
     hydralist_start_timer();
     jumpNode = getJumpNode(key);
@@ -214,7 +214,7 @@ class HydraListImpl
   unregisterThread()
   {
     if (curThreadData == NULL) return;
-    int threadId = curThreadData->getThreadId();
+    [[maybe_unused]] int threadId = curThreadData->getThreadId();
     curThreadData->setfinish();
 #ifdef HYDRALIST_ENABLE_STATS
     total_dl_time.fetch_add(curThreadData->dltime);
@@ -238,8 +238,8 @@ class HydraListImpl
     */
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
-    Val_t val;
-    uint64_t ticks;
+    Val_t val{};
+    [[maybe_unused]] uint64_t ticks;
     ListNode_t *jumpNode;
     // hydralist_start_timer();
     jumpNode = getJumpNode(key);
@@ -322,7 +322,7 @@ class HydraListImpl
     }
     g_WorkerThreadInst<K>[threadId] = NULL;
 
-    printf("Worker thread: %d Ops: %d\n", threadId, wt.opcount);
+    printf("Worker thread: %d Ops: %lu\n", threadId, wt.opcount);
   }
 
   static uint64_t
@@ -350,7 +350,7 @@ class HydraListImpl
   static void
   waitForThreads(std::vector<ThreadData *> &threadsToWait, uint64_t gpStartTime)
   {
-    for (int i = 0; i < threadsToWait.size(); i++) {
+    for (size_t i = 0; i < threadsToWait.size(); i++) {
       if (threadsToWait[i] == NULL) continue;
       ThreadData *td = threadsToWait[i];
       if (td->getRunCnt() % 2 == 0) continue;
