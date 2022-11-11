@@ -37,7 +37,7 @@ class WorkerThread
   {
     this->workerThreadId = id;
     this->activeNuma = activeNuma;
-    this->workQueue = &g_workQueue[workerThreadId];
+    this->workQueue = &g_workQueue<K>[workerThreadId];
     this->logDoneCount = 0;
     this->opcount = 0;
     if (id == 0) freeQueue = new std::queue<std::pair<uint64_t, void *>>;

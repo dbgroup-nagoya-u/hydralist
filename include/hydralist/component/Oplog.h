@@ -12,15 +12,17 @@
 #include "common.h"
 #include "ordo_clock.h"
 
-boost::lockfree::spsc_queue<std::vector<OpStruct<uint64_t> *> *, boost::lockfree::capacity<10000>>
+template <class K>
+class Oplog;
+template <class K>
+std::set<Oplog<K> *> g_perThreadLog;
+
+template <class K>
+boost::lockfree::spsc_queue<std::vector<OpStruct<K> *> *, boost::lockfree::capacity<10000>>
     g_workQueue[MAX_NUMA * WORKER_THREAD_PER_NUMA];
 std::atomic<int> numSplits;
 int combinerSplits = 0;
 std::atomic<unsigned long> curQ;
-
-template <class K>
-class Oplog;
-std::set<Oplog<uint64_t> *> g_perThreadLog;
 
 template <class K>
 class Oplog
@@ -68,9 +70,9 @@ class Oplog
   getOpLog()
   {
     Oplog *perThreadLog = Oplog::getPerThreadInstance();
-    if (!g_perThreadLog.count(perThreadLog)) {
+    if (!g_perThreadLog<K>.count(perThreadLog)) {
       perThreadLog = new Oplog;
-      g_perThreadLog.insert(perThreadLog);
+      g_perThreadLog<K>.insert(perThreadLog);
       setPerThreadInstance(perThreadLog);
     }
     return perThreadLog;
