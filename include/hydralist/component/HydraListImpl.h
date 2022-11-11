@@ -141,7 +141,6 @@ class HydraListImpl
     combinerThead->join();
 
     printf("sl size: %u\n", g_perNumaSlPtr_t[0]->size());
-    // printf("ll size: %u\n", dl.size(dl.getHead()));
     for (int i = 0; i < totalNumaActive; i++) delete g_perNumaSlPtr_t[i];
     std::cout << "Total splits: " << numSplits << std::endl;
     std::cout << "Combiner splits: " << combinerSplits << std::endl;
@@ -219,31 +218,13 @@ class HydraListImpl
   Val_t
   lookup(K &key)
   {
-    /*
-    if (!g_globalStop) {
-        g_globalStop = true;
-        //printf("sl size: %u\n", g_perNumaSlPtr[0]->size());
-        //printf("ll size: %u\n", dl.size(dl.getHead()));
-        for (auto &t : wtArray)
-            t->join();
-        combinerThead->join();
-        if (numSplits -1000 > combinerSplits) exit(-1);
-    }
-    */
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
     Val_t val{};
     [[maybe_unused]] uint64_t ticks;
     ListNode_t *jumpNode;
-    // hydralist_start_timer();
     jumpNode = getJumpNode(key);
-    // hydralist_stop_timer(ticks);
-    // acc_sl_time(ticks);
-
-    // hydralist_start_timer();
     dl.lookup(key, val, jumpNode);
-    // hydralist_stop_timer(ticks);
-    // acc_dl_time(ticks);
     curThreadData->read_unlock();
     return val;
   }

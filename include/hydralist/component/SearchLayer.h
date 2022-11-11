@@ -4,41 +4,6 @@
 #include "Tree.h"
 #include "common.h"
 #include "numa.h"
-/*
-class SortedArray {
-private:
-    std::vector<std::pair<Key_t, void* >>  sortedArray;
-public:
-    bool insert(Key_t key, void* ptr) {
-        sortedArray.emplace_back(key, ptr);
-        sort(sortedArray.begin(), sortedArray.end());
-        return true;
-    }
-    bool remove(Key_t key) {
-        for(auto iter = sortedArray.begin(); iter != sortedArray.end(); ++iter) {
-            if(iter->first == key)
-                sortedArray.erase(iter);
-        }
-
-    }
-    //Gets the value of the key if present or the value of key just less than key
-    void* lookup(Key_t key) {
-        int i = 0;
-        if(sortedArray.empty())
-            return nullptr;
-        while(sortedArray[i].first < key && i < sortedArray.size()) {
-            i++;
-        }
-        if(key < sortedArray[0].first)
-            return nullptr;
-        if(i == sortedArray.size())
-            return sortedArray.back().second;
-        if(sortedArray[i].first == key)
-            return sortedArray[i].second;
-        else
-            return sortedArray[i-1].second;
-    }
-};*/
 
 template <class K>
 class ArtRowexIndex
@@ -115,9 +80,7 @@ class ArtRowexIndex
     return numInserts;
   }
 };
-// typedef SortedArray SearchLayer;
 
-// typedef ArtRowexIndex<K> SearchLayer; // typedefはテンプレート化できない
 template <class K>
 using SearchLayer = ArtRowexIndex<K>;
 
