@@ -5,11 +5,9 @@
 #ifndef HYDRALIST_COMMON_H
 #define HYDRALIST_COMMON_H
 #include <cstdint>
-// typedef uint64_t Key_t;
 typedef uint64_t Val_t;
 #define MAX_NUMA 8
 #define WORKER_THREAD_PER_NUMA 1
-//#define HYDRALIST_ENABLE_STATS
 
 template <class K>
 class OpStruct

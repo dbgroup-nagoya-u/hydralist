@@ -121,7 +121,6 @@ TYPED_TEST(linkedListTest, splitTest)
   for (auto x : randnums) {
     ASSERT_EQ(true, testList.insert(x, x, head));
   }
-  // testList.print(head);
   for (auto x : randnums) {
     Val_t y;
     ASSERT_EQ(true, testList.lookup(x, y, head));
@@ -129,7 +128,6 @@ TYPED_TEST(linkedListTest, splitTest)
   for (auto x : randnums) {
     ASSERT_EQ(true, testList.remove(x, head));
   }
-  // testList.print(head);
 }
 
 TYPED_TEST(linkedListTest, multithread1)
@@ -159,7 +157,6 @@ TYPED_TEST(linkedListTest, multithread1)
         new std::thread(TestFixture::multithreadRemove, &ll, i, numInserts, MAX_THREADS, &nums);
   }
   for (int i = 0; i < MAX_THREADS; i++) threads[i]->join();
-  // ll.print(ll.getHead());
 }
 
 TYPED_TEST(linkedListTest, scanTest)
@@ -188,7 +185,6 @@ TYPED_TEST(linkedListTest, scanTest)
 }
 
 TYPED_TEST(linkedListTest, sanitytest)
-// TYPED_TEST(lockTest, sanitytest)
 {
   VersionedLock lock;
   std::vector<int> tvector;
@@ -204,7 +200,6 @@ TYPED_TEST(linkedListTest, sanitytest)
 }
 
 TYPED_TEST(linkedListTest, InterleaveRW)
-// TYPED_TEST(lockTest, InterleaveRW)
 {
   VersionedLock lock;
   std::vector<int> tvector;

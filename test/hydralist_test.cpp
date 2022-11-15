@@ -59,9 +59,6 @@ class hydraListTest : public ::testing::Test
     hl->unregisterThread();
   }
 
-  // #define RAND_NUMS_SIZE 1000000
-  //   int randNums[RAND_NUMS_SIZE];
-
   static void
   generateRandomNums(int n)
   {
@@ -227,7 +224,6 @@ TYPED_TEST(hydraListTest, scan)
   hl->registerThread();
   int range = 100;
   std::vector<Val_t> result(range);
-  // Key_t startKey = 100;
   uint64_t startKey = 100;
 
   uint64_t resultSize = hl->scan(startKey, range, result);

@@ -42,8 +42,6 @@ class ListNode
   uint8_t fingerPrint[MAX_ENTRIES];
   VersionedLock verLock;
 
-  // Key_t keyArray[MAX_ENTRIES];
-  // Val_t valueArray[MAX_ENTRIES];
   std::pair<K, Val_t> keyArray[MAX_ENTRIES];
 
   uint64_t lastScanVersion;
@@ -118,7 +116,6 @@ class ListNode
     deleteNode->setDeleted(true);
     setMax(deleteNode->getMax());
 
-    // deleteNode->writeUnlock();
     return deleteNode;
   }
 
@@ -151,7 +148,7 @@ class ListNode
     mergeNode->setMax(deleteNode->getMax());
 
     mergeNode->writeUnlock();
-    // deleteNode->writeUnlock();
+
     return deleteNode;
   }
 
@@ -185,7 +182,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("xxxpos: %d key: %d\n", pos, key);
       if (keyArray[pos + 32].first == key) return pos + 32;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -206,7 +202,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("pos: %d key: %d\n", pos, key);
       if (keyArray[pos].first == key) return pos;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -214,7 +209,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("xxxpos: %d key: %d\n", pos, key);
       if (keyArray[pos + 32].first == key) return pos + 32;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -226,7 +220,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("pos: %d key: %d\n", pos, key);
       if (keyArray[pos + 64].first == key) return pos + 64;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -234,7 +227,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("xxxpos: %d key: %d\n", pos, key);
       if (keyArray[pos + 96].first == key) return pos + 96;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -369,7 +361,7 @@ class ListNode
   uint8_t
   getKeyFingerPrint(K key)
   {
-    key = (~key) + (key << 18);  // key = (key << 18) - key - 1;
+    key = (~key) + (key << 18);
     key = key ^ (key >> 31);
     key = (key + (key << 2)) + (key << 4);
     key = key ^ (key >> 11);

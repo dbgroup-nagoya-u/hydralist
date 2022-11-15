@@ -8,7 +8,6 @@
 
 #include "listNode.h"
 #define cpu_relax() asm volatile("pause\n" : : : "memory")
-// std::atomic<int> numSplits;
 
 enum Operation { lt, gt };
 
@@ -173,9 +172,6 @@ class LinkedList
   {
   restart:
     ListNode_t *cur = head;
-    // int count = 0;
-    // if(cur->getMin() > key)
-    //    std::atomic_fetch_add(&numSplits, 1);
 
     while (1) {
       if (cur->getMin() > key) {
@@ -213,8 +209,6 @@ class LinkedList
   restart:
     ListNode_t *cur = head;
     [[maybe_unused]] int count = 0;
-    // if(cur->getMin() > key)
-    //    std::atomic_fetch_add(&numSplits, 1);
 
     while (1) {
       if (cur->getMin() > key) {

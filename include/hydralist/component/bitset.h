@@ -41,19 +41,16 @@ class bitset
   void
   set(int index)
   {
-    // assert(index < 128 && index >= 0);
     setBit(index, bits[index / 64]);
   }
   void
   reset(int index)
   {
-    // assert(index < 128 && index >= 0);
     resetBit(index, bits[index / 64]);
   }
   bool
   test(int index)
   {
-    // assert(index < 128 && index >= 0);
     return testBit(index, bits[index / 64]);
   }
   bool
