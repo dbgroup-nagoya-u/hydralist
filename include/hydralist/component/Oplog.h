@@ -101,7 +101,6 @@ class Oplog
     }
     op_[qnum].push_back(ops);
     qLock[qnum].unlock();
-    // std::atomic_fetch_add(&numSplits, 1);
   }
 
   void

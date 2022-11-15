@@ -75,12 +75,14 @@ class HydraListImpl
 
   using ListNode_t = ListNode<K>;
   using OpStruct_t = OpStruct<K>;
-  using g_perNumaSlPtr = g_perNumaSlPtr<K>
+  using SearchLayer_t = SearchLayer<K>;
+  using CombinerThread_t = CombinerThread<K>;
 
-      private : SearchLayer<K> sl;
+ private:
+  SearchLayer_t sl;
   DataLayer<K> dl;
   std::vector<std::thread *> wtArray;  // CurrentOne but there should be numa number of threads
-  std::thread *combinerThead;
+  std::thread *combinerThread;
   static inline thread_local int threadNumaNode = -1;
   void
   createWorkerThread(int numNuma)
@@ -97,14 +99,14 @@ class HydraListImpl
   void
   createCombinerThread()
   {
-    combinerThead = new std::thread(combinerThreadExec, totalNumaActive);
+    combinerThread = new std::thread(combinerThreadExec, totalNumaActive);
   }
 
   ListNode_t *
   getJumpNode(K &key)
   {
     int numaNode = getThreadNuma();
-    SearchLayer<K> &sl = *g_perNumaSlPtr_t[numaNode];
+    SearchLayer_t &sl = *g_perNumaSlPtr<K>[numaNode];
     if (sl.isEmpty()) return dl.getHead();
     auto *jumpNode = reinterpret_cast<ListNode_t *>(sl.lookup(key));
     if (jumpNode == nullptr) jumpNode = dl.getHead();
@@ -119,7 +121,7 @@ class HydraListImpl
   {
     assert(numNuma <= NUM_SOCKET);
     totalNumaActive = numNuma;
-    g_perNumaSlPtr_t.resize(totalNumaActive);
+    g_perNumaSlPtr<K>.resize(totalNumaActive);
     dl.initialize();
     g_globalStop = false;
     g_combinerStop = false;
@@ -138,10 +140,10 @@ class HydraListImpl
   {
     g_globalStop = true;
     for (auto &t : wtArray) t->join();
-    combinerThead->join();
+    combinerThread->join();
 
-    printf("sl size: %u\n", g_perNumaSlPtr_t[0]->size());
-    for (int i = 0; i < totalNumaActive; i++) delete g_perNumaSlPtr_t[i];
+    printf("sl size: %u\n", g_perNumaSlPtr<K>[0] -> size());
+    for (int i = 0; i < totalNumaActive; i++) delete g_perNumaSlPtr<K>[i];
     std::cout << "Total splits: " << numSplits << std::endl;
     std::cout << "Combiner splits: " << combinerSplits << std::endl;
 #ifdef HYDRALIST_ENABLE_STATS
@@ -235,10 +237,10 @@ class HydraListImpl
     return dl.scan(startKey, range, result, getJumpNode(startKey));
   }
 
-  static SearchLayer<K> *
+  static SearchLayer_t *
   createSearchLayer()
   {
-    return new SearchLayer<K>;
+    return new SearchLayer_t;
   }
 
   static int
@@ -267,8 +269,8 @@ class HydraListImpl
         ;
       slReady[threadId] = false;
       assert(numa_node_of_cpu(sched_getcpu()) == threadId);
-      g_perNumaSlPtr_t[threadId] = createSearchLayer();
-      g_perNumaSlPtr_t[threadId]->setNuma(threadId);
+      g_perNumaSlPtr<K>[threadId] = createSearchLayer();
+      g_perNumaSlPtr<K>[threadId] -> setNuma(threadId);
       slReady[threadId] = true;
       printf("Search layer %d\n", threadId);
     }
@@ -346,7 +348,7 @@ class HydraListImpl
   static void
   combinerThreadExec(int activeNuma)
   {
-    CombinerThread<K> ct;
+    CombinerThread_t ct;
     int count = 0;
     while (!g_globalStop) {
       std::vector<OpStruct<K> *> *mergedLog = ct.combineLogs();

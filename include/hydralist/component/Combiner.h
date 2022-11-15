@@ -18,7 +18,6 @@ class CombinerThread
 
   using OpStruct_t = OpStruct<K>;
   using Oplog_t = Oplog<K>;
-  using g_WorkerThreadInst_t = g_WorkerThreadInst<K>;
 
  private:
   std::queue<std::pair<unsigned long, std::vector<OpStruct_t *> *>> logQueue;
@@ -66,7 +65,7 @@ class CombinerThread
 
     unsigned long minDoneCountWt = ULONG_MAX;
     for (auto i = 0; i < activeNuma * WORKER_THREAD_PER_NUMA; i++) {
-      unsigned long logDoneCount = g_WorkerThreadInst_t[i]->getLogDoneCount();
+      unsigned long logDoneCount = g_WorkerThreadInst<K>[i] -> getLogDoneCount();
       if (logDoneCount < minDoneCountWt) minDoneCountWt = logDoneCount;
     }
 
