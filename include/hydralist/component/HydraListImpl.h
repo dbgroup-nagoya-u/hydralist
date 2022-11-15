@@ -49,7 +49,6 @@
 #define hydralist_reset_timers()
 #endif
 
-std::vector<WorkerThread *> g_WorkerThreadInst(MAX_NUMA *WORKER_THREAD_PER_NUMA);
 std::set<ThreadData *> g_threadDataSet;
 std::atomic<bool> g_globalStop;
 std::atomic<bool> g_combinerStop;
@@ -60,24 +59,31 @@ std::mutex g_threadDataLock;
 uint64_t g_removeCount;
 volatile std::atomic<bool> g_removeDetected;
 
-// extern std::vector<SearchLayer*> g_perNumaSlPtr;
-// extern std::set<ThreadData*> g_threadDataSet;
-typedef LinkedList DataLayer;
+template <class K>
+extern std::vector<SearchLayer<K> *> g_perNumaSlPtr;
+extern std::set<ThreadData *> g_threadDataSet;
 
-unsigned long tacc_rdtscp(int *chip, int *core);
-void workerThreadExec(int threadId, int activeNuma);
-void combinerThreadExec(int activeNuma);
-void pinThread(std::thread *t, int numaId);
+template <class K>
+using DataLayer = LinkedList<K>;
 
+template <class K>
 class HydraListImpl
 {
- private:
-  SearchLayer sl;
-  DataLayer dl;
-  std::vector<std::thread *> wtArray;  // CurrentOne but there should be numa number of threads
-  std::thread *combinerThead;
-  static inline thread_local int threadNumaNode = -1;
+  /*####################################################################################
+   * Type aliases
+   *##################################################################################*/
 
+  using ListNode_t = ListNode<K>;
+  using OpStruct_t = OpStruct<K>;
+  using SearchLayer_t = SearchLayer<K>;
+  using CombinerThread_t = CombinerThread<K>;
+
+ private:
+  SearchLayer_t sl;
+  DataLayer<K> dl;
+  std::vector<std::thread *> wtArray;  // CurrentOne but there should be numa number of threads
+  std::thread *combinerThread;
+  static inline thread_local int threadNumaNode = -1;
   void
   createWorkerThread(int numNuma)
   {
@@ -93,16 +99,16 @@ class HydraListImpl
   void
   createCombinerThread()
   {
-    combinerThead = new std::thread(combinerThreadExec, totalNumaActive);
+    combinerThread = new std::thread(combinerThreadExec, totalNumaActive);
   }
 
-  ListNode *
-  getJumpNode(Key_t &key)
+  ListNode_t *
+  getJumpNode(K &key)
   {
     int numaNode = getThreadNuma();
-    SearchLayer &sl = *g_perNumaSlPtr[numaNode];
+    SearchLayer_t &sl = *g_perNumaSlPtr<K>[numaNode];
     if (sl.isEmpty()) return dl.getHead();
-    auto *jumpNode = reinterpret_cast<ListNode *>(sl.lookup(key));
+    auto *jumpNode = reinterpret_cast<ListNode_t *>(sl.lookup(key));
     if (jumpNode == nullptr) jumpNode = dl.getHead();
     return jumpNode;
   }
@@ -115,7 +121,7 @@ class HydraListImpl
   {
     assert(numNuma <= NUM_SOCKET);
     totalNumaActive = numNuma;
-    g_perNumaSlPtr.resize(totalNumaActive);
+    g_perNumaSlPtr<K>.resize(totalNumaActive);
     dl.initialize();
     g_globalStop = false;
     g_combinerStop = false;
@@ -134,11 +140,10 @@ class HydraListImpl
   {
     g_globalStop = true;
     for (auto &t : wtArray) t->join();
-    combinerThead->join();
+    combinerThread->join();
 
-    printf("sl size: %u\n", g_perNumaSlPtr[0]->size());
-    // printf("ll size: %u\n", dl.size(dl.getHead()));
-    for (int i = 0; i < totalNumaActive; i++) delete g_perNumaSlPtr[i];
+    printf("sl size: %u\n", g_perNumaSlPtr<K>[0] -> size());
+    for (int i = 0; i < totalNumaActive; i++) delete g_perNumaSlPtr<K>[i];
     std::cout << "Total splits: " << numSplits << std::endl;
     std::cout << "Combiner splits: " << combinerSplits << std::endl;
 #ifdef HYDRALIST_ENABLE_STATS
@@ -146,13 +151,14 @@ class HydraListImpl
     std::cout << "total_sl_time: " << total_sl_time / numThreads / 1000 << std::endl;
 #endif
   }
+
   bool
-  insert(Key_t &key, Val_t val)
+  insert(K &key, Val_t val)
   {
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
-    ListNode *jumpNode;
-    uint64_t ticks = 0;
+    ListNode_t *jumpNode;
+    [[maybe_unused]] uint64_t ticks = 0;
     bool ret;
     hydralist_start_timer();
     jumpNode = getJumpNode(key);
@@ -168,7 +174,7 @@ class HydraListImpl
   }
 
   bool
-  update(Key_t &key, Val_t val)
+  update(K &key, Val_t val)
   {
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
@@ -178,7 +184,7 @@ class HydraListImpl
   }
 
   bool
-  remove(Key_t &key)
+  remove(K &key)
   {
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
@@ -203,7 +209,7 @@ class HydraListImpl
   unregisterThread()
   {
     if (curThreadData == NULL) return;
-    int threadId = curThreadData->getThreadId();
+    [[maybe_unused]] int threadId = curThreadData->getThreadId();
     curThreadData->setfinish();
 #ifdef HYDRALIST_ENABLE_STATS
     total_dl_time.fetch_add(curThreadData->dltime);
@@ -212,47 +218,29 @@ class HydraListImpl
   }
 
   Val_t
-  lookup(Key_t &key)
+  lookup(K &key)
   {
-    /*
-    if (!g_globalStop) {
-        g_globalStop = true;
-        //printf("sl size: %u\n", g_perNumaSlPtr[0]->size());
-        //printf("ll size: %u\n", dl.size(dl.getHead()));
-        for (auto &t : wtArray)
-            t->join();
-        combinerThead->join();
-        if (numSplits -1000 > combinerSplits) exit(-1);
-    }
-    */
     uint64_t clock = ordo_get_clock();
     curThreadData->read_lock(clock);
-    Val_t val;
-    uint64_t ticks;
-    ListNode *jumpNode;
-    // hydralist_start_timer();
+    Val_t val{};
+    [[maybe_unused]] uint64_t ticks;
+    ListNode_t *jumpNode;
     jumpNode = getJumpNode(key);
-    // hydralist_stop_timer(ticks);
-    // acc_sl_time(ticks);
-
-    // hydralist_start_timer();
     dl.lookup(key, val, jumpNode);
-    // hydralist_stop_timer(ticks);
-    // acc_dl_time(ticks);
     curThreadData->read_unlock();
     return val;
   }
 
   uint64_t
-  scan(Key_t &startKey, int range, std::vector<Key_t> &result)
+  scan(K &startKey, int range, std::vector<K> &result)
   {
     return dl.scan(startKey, range, result, getJumpNode(startKey));
   }
 
-  static SearchLayer *
+  static SearchLayer_t *
   createSearchLayer()
   {
-    return new SearchLayer;
+    return new SearchLayer_t;
   }
 
   static int
@@ -271,157 +259,157 @@ class HydraListImpl
       return threadNumaNode;
   }
 
+  static void
+  workerThreadExec(int threadId, int activeNuma)
+  {
+    WorkerThread<K> wt(threadId, activeNuma);
+    g_WorkerThreadInst<K>[threadId] = &wt;
+    if (threadId < activeNuma) {
+      while (threadInitialized[threadId] == 0)
+        ;
+      slReady[threadId] = false;
+      assert(numa_node_of_cpu(sched_getcpu()) == threadId);
+      g_perNumaSlPtr<K>[threadId] = createSearchLayer();
+      g_perNumaSlPtr<K>[threadId] -> setNuma(threadId);
+      slReady[threadId] = true;
+      printf("Search layer %d\n", threadId);
+    }
+    int count = 0;
+    uint64_t lastRemoveCount = 0;
+    while (!g_combinerStop) {
+      usleep(200);
+      while (!wt.isWorkQueueEmpty()) {
+        count++;
+        wt.applyOperation();
+      }
+      if (threadId == 0 && lastRemoveCount != g_removeCount) {
+        wt.freeListNodes(g_removeCount);
+      }
+    }
+    while (!wt.isWorkQueueEmpty()) {
+      count++;
+      if (wt.applyOperation() && !g_removeDetected) {
+        g_removeDetected.store(true);
+      }
+    }
+    // If worker threads are stopping that means there are no more
+    // user threads
+    if (threadId == 0) {
+      wt.freeListNodes(ULLONG_MAX);
+    }
+    g_WorkerThreadInst<K>[threadId] = NULL;
+
+    printf("Worker thread: %d Ops: %lu\n", threadId, wt.opcount);
+  }
+
+  static uint64_t
+  gracePeriodInit(std::vector<ThreadData *> &threadsToWait)
+  {
+    uint64_t curTime = ordo_get_clock();
+    for (auto td : g_threadDataSet) {
+      if (td->getFinish()) {
+        g_threadDataLock.lock();
+        g_threadDataSet.erase(td);
+        g_threadDataLock.unlock();
+        free(td);
+        continue;
+      }
+      if (td->getRunCnt() % 2) {
+        if (ordo_gt_clock(td->getLocalClock(), curTime))
+          continue;
+        else
+          threadsToWait.push_back(td);
+      }
+    }
+    return curTime;
+  }
+
+  static void
+  waitForThreads(std::vector<ThreadData *> &threadsToWait, uint64_t gpStartTime)
+  {
+    for (size_t i = 0; i < threadsToWait.size(); i++) {
+      if (threadsToWait[i] == NULL) continue;
+      ThreadData *td = threadsToWait[i];
+      if (td->getRunCnt() % 2 == 0) continue;
+      if (ordo_gt_clock(td->getLocalClock(), gpStartTime)) continue;
+      while (td->getRunCnt() % 2) {
+        usleep(1);
+        std::atomic_thread_fence(std::memory_order::memory_order_acq_rel);
+      }
+    }
+  }
+
+  static void
+  broadcastDoneCount(uint64_t removeCount)
+  {
+    g_removeCount = removeCount;
+  }
+
+  static void
+  combinerThreadExec(int activeNuma)
+  {
+    CombinerThread_t ct;
+    int count = 0;
+    while (!g_globalStop) {
+      std::vector<OpStruct<K> *> *mergedLog = ct.combineLogs();
+      if (mergedLog != nullptr) {
+        count++;
+        ct.broadcastMergedLog(mergedLog, activeNuma);
+      }
+      uint64_t doneCountWt = ct.freeMergedLogs(activeNuma, false);
+      std::vector<ThreadData *> threadsToWait;
+      if (g_removeDetected && doneCountWt != 0) {
+        uint64_t gpStartTime = gracePeriodInit(threadsToWait);
+        waitForThreads(threadsToWait, gpStartTime);
+        broadcastDoneCount(doneCountWt);
+        g_removeDetected.store(false);
+      } else
+        usleep(100);
+    }
+    // TODO fix this
+    int i = 20;
+    while (i--) {
+      usleep(200);
+      std::vector<OpStruct<K> *> *mergedLog = ct.combineLogs();
+      if (mergedLog != nullptr) {
+        count++;
+        ct.broadcastMergedLog(mergedLog, activeNuma);
+      }
+    }
+    while (!ct.mergedLogsToBeFreed()) ct.freeMergedLogs(activeNuma, true);
+    g_combinerStop = true;
+    printf("Combiner thread: Ops: %d\n", count);
+  }
+
+  void
+  pinThread(std::thread *t, int numaId)
+  {
+    cpu_set_t cpuSet;
+    CPU_ZERO(&cpuSet);
+    for (int i = 0; i < NUM_SOCKET; i++) {
+      for (int j = 0; j < SMT_LEVEL; j++) {
+        CPU_SET(OS_CPU_ID[numaId][i][j], &cpuSet);
+      }
+    }
+    int rc = pthread_setaffinity_np(t->native_handle(), sizeof(cpu_set_t), &cpuSet);
+    assert(rc == 0);
+  }
+
+  static unsigned long
+  tacc_rdtscp(int *chip, int *core)
+  {
+    unsigned long a, d, c;
+    __asm__ volatile("rdtscp" : "=a"(a), "=d"(d), "=c"(c));
+    *chip = (c & 0xFFF000) >> 12;
+    *core = c & 0xFFF;
+    return ((unsigned long)a) | (((unsigned long)d) << 32);
+    ;
+  }
+
 #ifdef HYDRALIST_ENABLE_STATS
   std::atomic<uint64_t> total_sl_time;
   std::atomic<uint64_t> total_dl_time;
 #endif
 };
-
-void
-workerThreadExec(int threadId, int activeNuma)
-{
-  WorkerThread wt(threadId, activeNuma);
-  g_WorkerThreadInst[threadId] = &wt;
-  if (threadId < activeNuma) {
-    while (threadInitialized[threadId] == 0)
-      ;
-    slReady[threadId] = false;
-    assert(numa_node_of_cpu(sched_getcpu()) == threadId);
-    g_perNumaSlPtr[threadId] = HydraListImpl::createSearchLayer();
-    g_perNumaSlPtr[threadId]->setNuma(threadId);
-    slReady[threadId] = true;
-    printf("Search layer %d\n", threadId);
-  }
-  int count = 0;
-  uint64_t lastRemoveCount = 0;
-  while (!g_combinerStop) {
-    usleep(200);
-    while (!wt.isWorkQueueEmpty()) {
-      count++;
-      wt.applyOperation();
-    }
-    if (threadId == 0 && lastRemoveCount != g_removeCount) {
-      wt.freeListNodes(g_removeCount);
-    }
-  }
-  while (!wt.isWorkQueueEmpty()) {
-    count++;
-    if (wt.applyOperation() && !g_removeDetected) {
-      g_removeDetected.store(true);
-    }
-  }
-  // If worker threads are stopping that means there are no more
-  // user threads
-  if (threadId == 0) {
-    wt.freeListNodes(ULLONG_MAX);
-  }
-  g_WorkerThreadInst[threadId] = NULL;
-
-  printf("Worker thread: %d Ops: %d\n", threadId, wt.opcount);
-}
-
-uint64_t
-gracePeriodInit(std::vector<ThreadData *> &threadsToWait)
-{
-  uint64_t curTime = ordo_get_clock();
-  for (auto td : g_threadDataSet) {
-    if (td->getFinish()) {
-      g_threadDataLock.lock();
-      g_threadDataSet.erase(td);
-      g_threadDataLock.unlock();
-      free(td);
-      continue;
-    }
-    if (td->getRunCnt() % 2) {
-      if (ordo_gt_clock(td->getLocalClock(), curTime))
-        continue;
-      else
-        threadsToWait.push_back(td);
-    }
-  }
-  return curTime;
-}
-
-void
-waitForThreads(std::vector<ThreadData *> &threadsToWait, uint64_t gpStartTime)
-{
-  for (int i = 0; i < threadsToWait.size(); i++) {
-    if (threadsToWait[i] == NULL) continue;
-    ThreadData *td = threadsToWait[i];
-    if (td->getRunCnt() % 2 == 0) continue;
-    if (ordo_gt_clock(td->getLocalClock(), gpStartTime)) continue;
-    while (td->getRunCnt() % 2) {
-      usleep(1);
-      std::atomic_thread_fence(std::memory_order::memory_order_acq_rel);
-    }
-  }
-}
-
-void
-broadcastDoneCount(uint64_t removeCount)
-{
-  g_removeCount = removeCount;
-}
-
-void
-combinerThreadExec(int activeNuma)
-{
-  CombinerThread ct;
-  int count = 0;
-  while (!g_globalStop) {
-    std::vector<OpStruct *> *mergedLog = ct.combineLogs();
-    if (mergedLog != nullptr) {
-      count++;
-      ct.broadcastMergedLog(mergedLog, activeNuma);
-    }
-    uint64_t doneCountWt = ct.freeMergedLogs(activeNuma, false);
-    std::vector<ThreadData *> threadsToWait;
-    if (g_removeDetected && doneCountWt != 0) {
-      uint64_t gpStartTime = gracePeriodInit(threadsToWait);
-      waitForThreads(threadsToWait, gpStartTime);
-      broadcastDoneCount(doneCountWt);
-      g_removeDetected.store(false);
-    } else
-      usleep(100);
-  }
-  // TODO fix this
-  int i = 20;
-  while (i--) {
-    usleep(200);
-    std::vector<OpStruct *> *mergedLog = ct.combineLogs();
-    if (mergedLog != nullptr) {
-      count++;
-      ct.broadcastMergedLog(mergedLog, activeNuma);
-    }
-  }
-  while (!ct.mergedLogsToBeFreed()) ct.freeMergedLogs(activeNuma, true);
-  g_combinerStop = true;
-  printf("Combiner thread: Ops: %d\n", count);
-}
-
-void
-pinThread(std::thread *t, int numaId)
-{
-  cpu_set_t cpuSet;
-  CPU_ZERO(&cpuSet);
-  for (int i = 0; i < NUM_SOCKET; i++) {
-    for (int j = 0; j < SMT_LEVEL; j++) {
-      CPU_SET(OS_CPU_ID[numaId][i][j], &cpuSet);
-    }
-  }
-  int rc = pthread_setaffinity_np(t->native_handle(), sizeof(cpu_set_t), &cpuSet);
-  assert(rc == 0);
-}
-
-unsigned long
-tacc_rdtscp(int *chip, int *core)
-{
-  unsigned long a, d, c;
-  __asm__ volatile("rdtscp" : "=a"(a), "=d"(d), "=c"(c));
-  *chip = (c & 0xFFF000) >> 12;
-  *core = c & 0xFFF;
-  return ((unsigned long)a) | (((unsigned long)d) << 32);
-  ;
-}
 
 #endif  // HYDRALIST_HYDRALIST_H

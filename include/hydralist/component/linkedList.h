@@ -8,21 +8,27 @@
 
 #include "listNode.h"
 #define cpu_relax() asm volatile("pause\n" : : : "memory")
-// std::atomic<int> numSplits;
 
 enum Operation { lt, gt };
 
+template <class K>
 class LinkedList
 {
+  /*####################################################################################
+   * Type aliases
+   *##################################################################################*/
+
+  using ListNode_t = ListNode<K>;
+
  private:
-  ListNode *head;
+  ListNode_t *head;
 
  public:
-  ListNode *
+  ListNode_t *
   initialize()
   {
-    ListNode *head = new (ListNode);
-    ListNode *tail = new (ListNode);
+    ListNode_t *head = new (ListNode_t);
+    ListNode_t *tail = new (ListNode_t);
 
     head->insert(0, 0);
     head->setNext(tail);
@@ -41,11 +47,11 @@ class LinkedList
   }
 
   bool
-  insert(Key_t key, Val_t value, ListNode *head)
+  insert(K key, Val_t value, ListNode_t *head)
   {
     int retryCount = 0;
   restart:
-    ListNode *cur = head;
+    ListNode_t *cur = head;
 
     while (1) {
       if (cur->getMin() > key) {
@@ -83,11 +89,11 @@ class LinkedList
   }
 
   bool
-  update(Key_t key, Val_t value, ListNode *head)
+  update(K key, Val_t value, ListNode_t *head)
   {
     int retryCount = 0;
   restart:
-    ListNode *cur = head;
+    ListNode_t *cur = head;
 
     while (1) {
       if (cur->getMin() > key) {
@@ -125,10 +131,10 @@ class LinkedList
   }
 
   bool
-  remove(Key_t key, ListNode *head)
+  remove(K key, ListNode_t *head)
   {
   restart:
-    ListNode *cur = head;
+    ListNode_t *cur = head;
 
     while (1) {
       if (cur->getMin() > key) {
@@ -162,13 +168,10 @@ class LinkedList
   }
 
   bool
-  probe(Key_t key, ListNode *head)
+  probe(K key, ListNode_t *head)
   {
   restart:
-    ListNode *cur = head;
-    // int count = 0;
-    // if(cur->getMin() > key)
-    //    std::atomic_fetch_add(&numSplits, 1);
+    ListNode_t *cur = head;
 
     while (1) {
       if (cur->getMin() > key) {
@@ -200,14 +203,12 @@ class LinkedList
   }
 
   bool
-  lookup(Key_t key, Val_t &value, ListNode *head)
+  lookup(K key, Val_t &value, ListNode_t *head)
   {
     int retryCount = 0;
   restart:
-    ListNode *cur = head;
-    int count = 0;
-    // if(cur->getMin() > key)
-    //    std::atomic_fetch_add(&numSplits, 1);
+    ListNode_t *cur = head;
+    [[maybe_unused]] int count = 0;
 
     while (1) {
       if (cur->getMin() > key) {
@@ -246,10 +247,10 @@ class LinkedList
   }
 
   uint64_t
-  scan(Key_t startKey, int range, std::vector<Val_t> &rangeVector, ListNode *head)
+  scan(K startKey, size_t range, std::vector<Val_t> &rangeVector, ListNode_t *head)
   {
   restart:
-    ListNode *cur = head;
+    ListNode_t *cur = head;
     rangeVector.clear();
     // Find the start Node
     while (1) {
@@ -280,9 +281,9 @@ class LinkedList
   }
 
   void
-  print(ListNode *head)
+  print(ListNode_t *head)
   {
-    ListNode *cur = head;
+    ListNode_t *cur = head;
     while (cur->getNext() != nullptr) {
       cur->print();
       cur = cur->getNext();
@@ -292,9 +293,9 @@ class LinkedList
   }
 
   uint32_t
-  size(ListNode *head)
+  size(ListNode_t *head)
   {
-    ListNode *cur = head;
+    ListNode_t *cur = head;
     int count = 0;
     while (cur->getNext() != nullptr) {
       count++;
@@ -303,7 +304,7 @@ class LinkedList
     return count;
   }
 
-  ListNode *
+  ListNode_t *
   getHead()
   {
     return head;

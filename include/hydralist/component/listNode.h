@@ -16,11 +16,24 @@
 #include <xmmintrin.h>
 
 #define MAX_ENTRIES 64
+
+template <class K>
 class ListNode
 {
+  /*####################################################################################
+   * Type aliases
+   *##################################################################################*/
+
+  using OpStruct_t = OpStruct<K>;
+  using Oplog_t = Oplog<K>;
+
  private:
-  Key_t min;
-  volatile Key_t max;
+  /*####################################################################################
+   * Internal member variables
+   *##################################################################################*/
+
+  K min;
+  volatile K max;
   uint8_t numEntries;
   ListNode *next;
   ListNode *prev;
@@ -29,24 +42,26 @@ class ListNode
   uint8_t fingerPrint[MAX_ENTRIES];
   VersionedLock verLock;
 
-  // Key_t keyArray[MAX_ENTRIES];
-  // Val_t valueArray[MAX_ENTRIES];
-  std::pair<Key_t, Val_t> keyArray[MAX_ENTRIES];
+  std::pair<K, Val_t> keyArray[MAX_ENTRIES];
 
   uint64_t lastScanVersion;
   std::mutex pLock;
   uint8_t permuter[MAX_ENTRIES];
 
+  /*####################################################################################
+   * Internal member functions
+   *##################################################################################*/
+
   ListNode *
-  split(Key_t key, Val_t val, uint8_t keyHash)
+  split(K key, Val_t val, uint8_t keyHash)
   {
     // Find median
-    std::pair<Key_t, Val_t> copyArray[MAX_ENTRIES];
+    std::pair<K, Val_t> copyArray[MAX_ENTRIES];
     std::copy(std::begin(keyArray), std::end(keyArray), std::begin(copyArray));
     std::sort(std::begin(copyArray), std::end(copyArray), compare);
-    Key_t median = copyArray[MAX_ENTRIES / 2].first;
+    K median = copyArray[MAX_ENTRIES / 2].first;
     int newNumEntries = 0;
-    Key_t newMin = median;
+    K newMin = median;
     ListNode *newNode = new (ListNode);
     int removeIndex = -1;
     for (int i = 0; i < MAX_ENTRIES; i++) {
@@ -87,7 +102,7 @@ class ListNode
         for (int j = cur; j < MAX_ENTRIES; j++) {
           if (!bitMap[j]) {
             uint8_t keyHash = deleteNode->getFingerPrintArray()[i];
-            std::pair<Key_t, Val_t> &kv = deleteNode->getKeyArray()[i];
+            std::pair<K, Val_t> &kv = deleteNode->getKeyArray()[i];
             insertAtIndex(kv, j, keyHash);
             deleteNode->removeFromIndex(i);
             cur = j + 1;
@@ -101,7 +116,6 @@ class ListNode
     deleteNode->setDeleted(true);
     setMax(deleteNode->getMax());
 
-    // deleteNode->writeUnlock();
     return deleteNode;
   }
 
@@ -118,7 +132,7 @@ class ListNode
         for (int j = cur; j < MAX_ENTRIES; j++) {
           if (!mergeNode->getBitMap()->test(j)) {
             uint8_t keyHash = deleteNode->getFingerPrintArray()[i];
-            Key_t key = deleteNode->getKeyArray()[i].first;
+            K key = deleteNode->getKeyArray()[i].first;
             Val_t val = deleteNode->getValueArray()[i].second;
             mergeNode->insertAtIndex(std::make_pair(key, val), j, keyHash);
             deleteNode->removeFromIndex(i);
@@ -134,12 +148,12 @@ class ListNode
     mergeNode->setMax(deleteNode->getMax());
 
     mergeNode->writeUnlock();
-    // deleteNode->writeUnlock();
+
     return deleteNode;
   }
 
   uint8_t
-  getKeyInsertIndex(Key_t key)
+  getKeyInsertIndex(K key)
   {
     for (uint8_t i = 0; i < MAX_ENTRIES; i++) {
       if (!bitMap[i]) return i;
@@ -149,7 +163,7 @@ class ListNode
 #if MAX_ENTRIES == 64
 
   int
-  getKeyIndex(Key_t key, uint8_t keyHash)
+  getKeyIndex(K key, uint8_t keyHash)
   {
     __m512i v1 = _mm512_loadu_si512((__m512i *)fingerPrint);
     __m512i v2 = _mm512_set1_epi8((int8_t)keyHash);
@@ -168,7 +182,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("xxxpos: %d key: %d\n", pos, key);
       if (keyArray[pos + 32].first == key) return pos + 32;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -178,7 +191,7 @@ class ListNode
 #elif MAX_ENTRIES == 128
 
   int
-  getKeyIndex(Key_t key, uint8_t keyHash)
+  getKeyIndex(K key, uint8_t keyHash)
   {
     __m512i v1 = _mm512_loadu_si512((__m512i *)fingerPrint);
     __m512i v2 = _mm512_set1_epi8((int8_t)keyHash);
@@ -189,7 +202,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("pos: %d key: %d\n", pos, key);
       if (keyArray[pos].first == key) return pos;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -197,7 +209,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("xxxpos: %d key: %d\n", pos, key);
       if (keyArray[pos + 32].first == key) return pos + 32;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -209,7 +220,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("pos: %d key: %d\n", pos, key);
       if (keyArray[pos + 64].first == key) return pos + 64;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -217,7 +227,6 @@ class ListNode
     while (posToCheck) {
       int pos;
       asm("bsrl %1, %0" : "=r"(pos) : "r"((uint32_t)posToCheck));
-      // printf("xxxpos: %d key: %d\n", pos, key);
       if (keyArray[pos + 96].first == key) return pos + 96;
       posToCheck = posToCheck & (~(1 << pos));
     }
@@ -227,7 +236,7 @@ class ListNode
 #else
 
   int
-  getKeyIndex(Key_t key, uint8_t keyHash)
+  getKeyIndex(K key, uint8_t keyHash)
   {
     int count = 0;
     for (uint8_t i = 0; i < MAX_ENTRIES; i++) {
@@ -243,7 +252,7 @@ class ListNode
 #if MAX_ENTRIES == 64
 
   int
-  getFreeIndex(Key_t key, uint8_t keyHash)
+  getFreeIndex(K key, uint8_t keyHash)
   {
     int freeIndex;
     if (numEntries != 0 && getKeyIndex(key, keyHash) != -1) return -1;
@@ -265,7 +274,7 @@ class ListNode
 #elif MAX_ENTRIES == 128
 
   int
-  getFreeIndex(Key_t key, uint8_t keyHash)
+  getFreeIndex(K key, uint8_t keyHash)
   {
     int freeIndex;
     if (numEntries != 0 && getKeyIndex(key, keyHash) != -1) return -1;
@@ -303,7 +312,7 @@ class ListNode
 #else
 
   int
-  getFreeIndex(Key_t key, uint8_t keyHash)
+  getFreeIndex(K key, uint8_t keyHash)
   {
     int freeIndex = -2;
     int count = 0;
@@ -323,7 +332,7 @@ class ListNode
 #endif
 
   bool
-  insertAtIndex(std::pair<Key_t, Val_t> key, int index, uint8_t keyHash)
+  insertAtIndex(std::pair<K, Val_t> key, int index, uint8_t keyHash)
   {
     keyArray[index] = key;
     fingerPrint[index] = keyHash;
@@ -347,12 +356,12 @@ class ListNode
     return true;
   }
 
-  int lowerBound(Key_t key);
+  int lowerBound(K key);
 
   uint8_t
-  getKeyFingerPrint(Key_t key)
+  getKeyFingerPrint(K key)
   {
-    key = (~key) + (key << 18);  // key = (key << 18) - key - 1;
+    key = (~key) + (key << 18);
     key = key ^ (key >> 31);
     key = (key + (key << 2)) + (key << 4);
     key = key ^ (key >> 11);
@@ -369,7 +378,7 @@ class ListNode
       pLock.unlock();
       return;
     }
-    std::vector<std::pair<Key_t, uint8_t>> copyArray;
+    std::vector<std::pair<K, uint8_t>> copyArray;
     for (uint8_t i = 0; i < MAX_ENTRIES; i++) {
       if (bitMap[i]) copyArray.push_back(std::make_pair(keyArray[i].first, i));
     }
@@ -383,7 +392,7 @@ class ListNode
   }
 
   int
-  permuterLowerBound(Key_t key)
+  permuterLowerBound(K key)
   {
     int lower = 0;
     int upper = numEntries;
@@ -411,17 +420,17 @@ class ListNode
   }
 
   bool
-  insert(Key_t key, Val_t value)
+  insert(K key, Val_t value)
   {
     uint8_t keyHash = getKeyFingerPrint(key);
     int index = getFreeIndex(key, keyHash);
-    if (index == -1) return false;  // Key exitst
+    if (index == -1) return false;  // Key exist
     if (index == -2) {              // No free index
       ListNode *newNode = split(key, value, keyHash);
       ListNode *nextNode = newNode->getNext();
       nextNode->setPrev(newNode);
-      Oplog::enqPerThreadLog(OpStruct::insert, newNode->getMin(), keyHash,
-                             reinterpret_cast<void *>(newNode));
+      Oplog_t::enqPerThreadLog(OpStruct_t::insert, newNode->getMin(), keyHash,
+                               reinterpret_cast<void *>(newNode));
       return true;
     }
     if (!insertAtIndex(std::make_pair(key, value), (uint8_t)index, keyHash)) return false;
@@ -429,7 +438,7 @@ class ListNode
   }
 
   bool
-  update(Key_t key, Val_t value)
+  update(K key, Val_t value)
   {
     uint8_t keyHash = getKeyFingerPrint(key);
     int index = getKeyIndex(key, keyHash);
@@ -439,7 +448,7 @@ class ListNode
   }
 
   bool
-  remove(Key_t key)
+  remove(K key)
   {
     uint8_t keyHash = getKeyFingerPrint(key);
     int index = getKeyIndex(key, keyHash);
@@ -448,21 +457,21 @@ class ListNode
     if (numEntries + next->getNumEntries() < MAX_ENTRIES / 2) {
       ListNode *delNode = mergeWithNext();
       if (delNode != nullptr)
-        Oplog::enqPerThreadLog(OpStruct::remove, delNode->getMin(), keyHash,
-                               reinterpret_cast<void *>(delNode));
+        Oplog_t::enqPerThreadLog(OpStruct_t::remove, delNode->getMin(), keyHash,
+                                 reinterpret_cast<void *>(delNode));
       return true;
     }
     if (prev != NULL && numEntries + prev->getNumEntries() < MAX_ENTRIES / 2) {
       ListNode *delNode = mergeWithPrev();
       if (delNode != nullptr)
-        Oplog::enqPerThreadLog(OpStruct::remove, delNode->getMin(), keyHash,
-                               reinterpret_cast<void *>(delNode));
+        Oplog_t::enqPerThreadLog(OpStruct_t::remove, delNode->getMin(), keyHash,
+                                 reinterpret_cast<void *>(delNode));
     }
     return true;
   }
 
   bool
-  probe(Key_t key)
+  probe(K key)
   {
     int keyHash = getKeyFingerPrint(key);
     int index = getKeyIndex(key, keyHash);
@@ -473,7 +482,7 @@ class ListNode
   }  // return True if key exists
 
   bool
-  lookup(Key_t key, Val_t &value)
+  lookup(K key, Val_t &value)
   {
     int keyHash = getKeyFingerPrint(key);
     int index = getKeyIndex(key, keyHash);
@@ -486,7 +495,7 @@ class ListNode
   }
 
   bool
-  scan(Key_t startKey, int range, std::vector<Val_t> &rangeVector, uint64_t writeVersion)
+  scan(K startKey, size_t range, std::vector<Val_t> &rangeVector, uint64_t writeVersion)
   {
     if (next == nullptr) return true;
 
@@ -512,13 +521,13 @@ class ListNode
   }
 
   bool
-  checkRange(Key_t key)
+  checkRange(K key)
   {
     return min <= key && key < max;
   }
 
   bool
-  checkRangeLookup(Key_t key)
+  checkRangeLookup(K key)
   {
     int ne = numEntries;
     return min <= key && key <= keyArray[ne - 1].first;
@@ -561,13 +570,13 @@ class ListNode
   }
 
   void
-  setMin(Key_t key)
+  setMin(K key)
   {
     this->min = key;
   }
 
   void
-  setMax(Key_t key)
+  setMax(K key)
   {
     this->max = key;
   }
@@ -602,25 +611,25 @@ class ListNode
     return this->numEntries;
   }
 
-  Key_t
+  K
   getMin()
   {
     return this->min;
   }
 
-  Key_t
+  K
   getMax()
   {
     return this->max;
   }
 
-  std::pair<Key_t, Val_t> *
+  std::pair<K, Val_t> *
   getKeyArray()
   {
     return this->keyArray;
   }
 
-  std::pair<Key_t, Val_t> *
+  std::pair<K, Val_t> *
   getValueArray()
   {
     return this->keyArray;
@@ -645,7 +654,7 @@ class ListNode
   }
 
   static bool
-  compare(const std::pair<Key_t, Val_t> &i, const std::pair<Key_t, Val_t> &j)
+  compare(const std::pair<K, Val_t> &i, const std::pair<K, Val_t> &j)
   {
     return i.first < j.first;
   }

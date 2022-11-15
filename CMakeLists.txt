@@ -43,29 +43,27 @@ endif()
 #--------------------------------------------------------------------------------------#
 
 if(NOT TARGET hydralist::hydralist)
-  add_library(hydralist STATIC)
+  add_library(hydralist INTERFACE)
   add_library(hydralist::hydralist ALIAS hydralist)
-  target_compile_features(hydralist PUBLIC
+  target_compile_features(hydralist INTERFACE
     "cxx_std_17"
   )
-  target_compile_options(hydralist PUBLIC
+  target_compile_options(hydralist INTERFACE
     -mavx512f
     -mavx512bw
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2 -march=native">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"RelWithDebInfo">:"-g3 -Og -pg">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
-  target_include_directories(hydralist PUBLIC
+  target_include_directories(hydralist INTERFACE
     "${HYDRALIST_SOURCE_DIR}/include"
-    "${HYDRALIST_SOURCE_DIR}/include/hydralist"
   )
-  target_link_libraries(hydralist PUBLIC
+  target_link_libraries(hydralist INTERFACE
     pthread
     numa
     art
   )
 
-  add_subdirectory(include/hydralist/component)
 endif()
 
 #--------------------------------------------------------------------------------------#
