@@ -232,7 +232,7 @@ class HydraListImpl
   }
 
   uint64_t
-  scan(K &startKey, int range, std::vector<K> &result)
+  scan(K &startKey, int range, std::vector<Val_t> &result)
   {
     return dl.scan(startKey, range, result, getJumpNode(startKey));
   }
