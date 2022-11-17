@@ -63,7 +63,7 @@ class linkedListTest : public ::testing::Test
   }
 };
 
-using TestTargets = ::testing::Types<uint64_t>;
+using TestTargets = ::testing::Types<uint64_t, uint32_t>;
 
 TYPED_TEST_SUITE(linkedListTest, TestTargets);
 
